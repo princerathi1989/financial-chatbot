@@ -1,0 +1,94 @@
+---
+description: Testing Standards and Best Practices
+globs: ["test_*.py", "tests/**/*.py", "**/*_test.py"]
+alwaysApply: true
+---
+
+# Testing Standards and Best Practices
+
+## Test Structure and Organization
+- Use descriptive test names that explain what is being tested
+- Group related tests in test classes
+- Use proper test fixtures and setup/teardown methods
+- Implement proper test data management
+- Use parameterized tests for testing multiple scenarios
+
+## Test Coverage Requirements
+- Aim for at least 80% code coverage
+- Test all critical business logic paths
+- Test error handling and edge cases
+- Test integration points with external services
+- Test API endpoints with various input scenarios
+
+## Unit Testing
+- Test individual functions and methods in isolation
+- Use mocks for external dependencies
+- Test both success and failure scenarios
+- Use proper assertions with descriptive messages
+- Test input validation and error conditions
+
+## Integration Testing
+- Test complete workflows end-to-end
+- Test integration with external services (OpenAI API, vector store)
+- Test database operations and data persistence
+- Test API endpoints with real HTTP requests
+- Test file upload and processing workflows
+
+## Test Data Management
+- Use fixtures for common test data
+- Implement proper test data cleanup
+- Use factories for generating test data
+- Avoid hardcoded test data in test methods
+- Use realistic test data that matches production scenarios
+
+## Mocking and Stubbing
+- Mock external API calls and services
+- Use proper mock verification
+- Mock file system operations
+- Mock database operations for unit tests
+- Use dependency injection for easier mocking
+
+## Performance Testing
+- Test response times for critical operations
+- Test system behavior under load
+- Test memory usage and resource consumption
+- Test concurrent request handling
+- Implement proper performance benchmarks
+
+## Example Test Structure
+```python
+import pytest
+from unittest.mock import Mock, patch
+from fastapi.testclient import TestClient
+
+class TestAgentFunctionality:
+    """Test suite for agent functionality."""
+    
+    @pytest.fixture
+    def mock_vector_store(self):
+        """Mock vector store for testing."""
+        return Mock()
+    
+    @pytest.fixture
+    def test_document(self):
+        """Test document data."""
+        return {
+            "document_id": "test-doc-123",
+            "filename": "test.pdf",
+            "content": "Test document content"
+        }
+    
+    def test_rag_agent_query_processing(self, mock_vector_store, test_document):
+        """Test RAG agent query processing."""
+        # Arrange
+        agent = RAGAgent(vector_store=mock_vector_store)
+        query = "What is the main topic?"
+        
+        # Act
+        result = agent.process_query(query, test_document["document_id"])
+        
+        # Assert
+        assert result.response is not None
+        assert result.agent_type == AgentType.RAG
+        mock_vector_store.search.assert_called_once()
+```

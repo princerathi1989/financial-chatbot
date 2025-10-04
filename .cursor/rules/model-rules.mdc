@@ -1,0 +1,73 @@
+---
+description: Data Models and Schema Standards
+globs: ["models/**/*.py"]
+alwaysApply: true
+---
+
+# Data Models and Schema Rules
+
+## Pydantic Model Standards
+- Use descriptive field names that clearly indicate their purpose
+- Always include field descriptions for API documentation
+- Use proper type hints for all fields
+- Implement field validation where appropriate
+- Use enums for fixed value sets
+
+## Model Organization
+- Group related models in logical modules
+- Use inheritance for common fields
+- Implement proper model validation
+- Use Optional types for nullable fields
+- Include proper default values
+
+## API Schema Design
+- Design schemas to be self-documenting
+- Use consistent naming conventions (snake_case for Python, camelCase for JSON)
+- Include examples in field descriptions
+- Implement proper serialization/deserialization
+- Use proper HTTP status codes in response models
+
+## Validation Rules
+- Implement input validation at the model level
+- Use Pydantic validators for complex validation logic
+- Validate file types and sizes for upload models
+- Implement proper error messages for validation failures
+- Use custom validators for business logic validation
+
+## Documentation
+- Include comprehensive docstrings for all models
+- Document field purposes and constraints
+- Provide examples for complex models
+- Document validation rules and error conditions
+- Include usage examples in docstrings
+
+## Example Model Structure
+```python
+class BaseModel(BaseModel):
+    """Base model with common fields."""
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+        schema_extra = {
+            "example": {
+                # Provide example data
+            }
+        }
+
+class SpecificModel(BaseModel):
+    """Specific model with validation."""
+    
+    field_name: str = Field(
+        ..., 
+        description="Clear description of the field",
+        min_length=1,
+        max_length=100
+    )
+    
+    @validator('field_name')
+    def validate_field_name(cls, v):
+        # Custom validation logic
+        return v
+```

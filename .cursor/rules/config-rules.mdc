@@ -1,0 +1,66 @@
+---
+description: Configuration and Environment Management Rules
+globs: ["core/**/*.py"]
+alwaysApply: true
+---
+
+# Configuration and Environment Rules
+
+## Configuration Management
+- Use Pydantic Settings for all configuration
+- Implement proper environment variable handling
+- Use type hints for all configuration parameters
+- Implement configuration validation on startup
+- Use proper default values with clear documentation
+
+## Environment Variables
+- Use descriptive environment variable names
+- Implement proper environment variable validation
+- Use different configurations for different environments
+- Implement proper secret management
+- Document all required environment variables
+
+## Settings Structure
+- Group related settings logically
+- Use proper naming conventions for settings
+- Implement proper validation for settings values
+- Use enums for fixed value sets
+- Implement proper error messages for invalid settings
+
+## Security Considerations
+- Never hardcode sensitive information
+- Use proper secret management systems
+- Implement proper access controls for configuration
+- Use environment-specific configurations
+- Implement proper audit logging for configuration changes
+
+## Validation and Error Handling
+- Validate all configuration values on startup
+- Provide clear error messages for invalid configurations
+- Implement proper fallback mechanisms
+- Use proper logging for configuration issues
+- Implement proper configuration testing
+
+## Example Configuration Structure
+```python
+class Settings(BaseSettings):
+    """Application settings with proper validation."""
+    
+    # API Configuration
+    api_key: str = Field(..., description="API key for external services")
+    api_timeout: int = Field(30, ge=1, le=300, description="API timeout in seconds")
+    
+    # Database Configuration
+    database_url: str = Field(..., description="Database connection URL")
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+        validate_assignment = True
+    
+    @validator('api_key')
+    def validate_api_key(cls, v):
+        if not v or len(v) < 10:
+            raise ValueError('API key must be at least 10 characters')
+        return v
+```

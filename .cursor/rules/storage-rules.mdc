@@ -1,0 +1,96 @@
+---
+description: LangChain Vector Store and Financial Document Storage Implementation Rules
+globs: ["storage/**/*.py", "ingestion/**/*.py"]
+alwaysApply: true
+---
+
+# LangChain Vector Store and Financial Storage Rules
+
+## LangChain Vector Store Implementation
+- Use LangChain's vector store abstractions for financial document storage
+- Implement proper LangChain document loaders for financial PDFs and CSVs
+- Use LangChain text splitters optimized for financial content
+- Implement proper LangChain retrievers for financial document search
+- Use LangChain embeddings for financial document vectorization
+
+## Financial Document Processing with LangChain
+- Use LangChain's PyPDFLoader for financial PDF processing
+- Implement LangChain's CSVLoader for financial data processing
+- Use LangChain's RecursiveCharacterTextSplitter for financial documents
+- Add financial-specific metadata to LangChain documents
+- Implement proper financial document preprocessing with LangChain
+
+## LangChain Document Management
+- Use LangChain's document schema for financial documents
+- Implement proper LangChain document metadata for financial data
+- Use LangChain's document transformers for financial content
+- Implement proper LangChain document filtering for financial queries
+- Add financial document versioning with LangChain
+
+## LangChain Retrieval Optimization
+- Use LangChain's similarity search for financial document retrieval
+- Implement LangChain's hybrid search for financial queries
+- Use LangChain's retriever chains for complex financial queries
+- Implement proper LangChain retrieval filtering for financial data
+- Use LangChain's retrieval augmentation for financial Q&A
+
+## Financial Data Persistence
+- Implement proper financial data backup and recovery procedures
+- Use transactions for financial data consistency
+- Implement proper financial data migration strategies
+- Use proper indexing for financial query performance
+- Implement financial data retention policies
+
+## LangChain Integration Patterns
+- Use LangChain's Chroma integration for financial document storage
+- Implement LangChain's FAISS integration for financial vector search
+- Use LangChain's Pinecone integration for financial document retrieval
+- Implement proper LangChain memory for financial conversation context
+- Use LangChain's callback handlers for financial operation monitoring
+
+## Error Handling
+- Implement proper retry mechanisms for LangChain operations
+- Use circuit breaker patterns for LangChain external service calls
+- Implement proper logging for LangChain financial operations
+- Handle financial data corruption scenarios gracefully
+- Implement proper cleanup procedures for LangChain resources
+
+## Security Considerations
+- Implement proper access controls for financial data access
+- Use encryption for sensitive financial data at rest
+- Implement proper audit logging for financial operations
+- Validate all financial data inputs
+- Implement proper financial data sanitization
+
+## Example LangChain Storage Implementation
+```python
+from langchain.vectorstores import Chroma
+from langchain.document_loaders import PyPDFLoader, CSVLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.schema import Document
+
+class FinancialVectorStore:
+    def __init__(self, config: Settings):
+        self.config = config
+        self.embeddings = OpenAIEmbeddings()
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200
+        )
+        self.vector_store = Chroma(
+            embedding_function=self.embeddings,
+            persist_directory=config.chroma_persist_directory
+        )
+        self.logger = logger.bind(component="financial_vector_store")
+    
+    def add_financial_documents(self, documents: List[Document]):
+        try:
+            # Process financial documents with LangChain
+            processed_docs = self.text_splitter.split_documents(documents)
+            self.vector_store.add_documents(processed_docs)
+            self.logger.info(f"Added {len(processed_docs)} financial documents")
+        except Exception as e:
+            self.logger.error(f"Error adding financial documents: {e}")
+            raise FinancialStorageError(f"Failed to add documents: {str(e)}")
+```
