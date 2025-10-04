@@ -1,4 +1,5 @@
 # Docker Compose for Financial Multi-Agent Chatbot
+# Session-based processing with Pinecone vector store
 version: '3.8'
 
 services:
@@ -11,74 +12,46 @@ services:
       # OpenAI Configuration
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=gpt-4-turbo-preview
+      - OPENAI_EMBEDDING_MODEL=text-embedding-3-small
       
       # LangSmith Configuration (Optional)
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
       - LANGSMITH_PROJECT=financial-chatbot-prod
+      - LANGSMITH_ENDPOINT=https://api.smith.langchain.com
       
       # Production Configuration
       - ENVIRONMENT=production
       - DEBUG=false
       - LOG_LEVEL=INFO
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
       
-      # Vector Store Configuration
-      - VECTOR_STORE_TYPE=${VECTOR_STORE_TYPE:-pinecone}
+      # Vector Store Configuration (Pinecone only)
+      - VECTOR_STORE_TYPE=pinecone
       - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-us-west1-gcp}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-us-east-1}
       - PINECONE_INDEX_NAME=financial-documents-prod
+      - PINECONE_METRIC=cosine
       
-      # Cloud Storage Configuration
-      - STORAGE_TYPE=${STORAGE_TYPE:-s3}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=${AWS_REGION:-us-east-1}
-      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      # Database Configuration (in-memory only for session-based processing)
+      - DATABASE_TYPE=memory
       
-      # Database Configuration
-      - DATABASE_TYPE=${DATABASE_TYPE:-postgresql}
-      - DATABASE_URL=${DATABASE_URL}
+      # Agent Configuration
+      - RAG_TOP_K_RESULTS=5
+      - SUMMARY_MAX_LENGTH=500
+      - MCQ_NUM_QUESTIONS=5
+      - ANALYTICS_CONFIDENCE_THRESHOLD=0.8
       
-    depends_on:
-      - postgres
-      - redis
+      # Document Processing Settings
+      - MAX_CHUNK_SIZE=1000
+      - CHUNK_OVERLAP=200
+      - MAX_FILE_SIZE_MB=50
+      
     volumes:
       - ./storage:/app/storage
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB:-financial_chatbot}
-      - POSTGRES_USER=${POSTGRES_USER:-chatbot_user}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secure_password}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./deployment/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chatbot_user}"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Redis for caching and session management
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -95,7 +68,3 @@ services:
     depends_on:
       - chatbot
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-  redis_data:

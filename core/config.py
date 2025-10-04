@@ -26,46 +26,15 @@ class Settings(BaseSettings):
     # Production Cloud Configuration
     environment: str = "development"  # development, staging, production
     
-    # Vector Store Configuration (Cloud alternatives)
-    vector_store_type: str = "pinecone"  # chroma, pinecone, weaviate, qdrant, zilliz
+    # Vector Store Configuration (Pinecone only)
+    vector_store_type: str = "pinecone"  # pinecone only
     pinecone_api_key: Optional[str] = None
     pinecone_environment: str = "us-east-1"
     pinecone_index_name: str = "financial-documents"
     pinecone_metric: str = "cosine"
     
-    # Zilliz Cloud Configuration (cheapest option)
-    zilliz_api_key: Optional[str] = None
-    zilliz_cloud_region: str = "us-east-1"
-    zilliz_collection_name: str = "financial_documents"
-    zilliz_uri: Optional[str] = None
-    zilliz_token: Optional[str] = None
-    
-    # Cloud Storage Configuration
-    storage_type: str = "local"  # local, s3, gcs, azure
-    aws_access_key_id: Optional[str] = None
-    aws_secret_access_key: Optional[str] = None
-    aws_region: str = "us-east-1"
-    s3_bucket_name: Optional[str] = None
-    
-    # Azure Blob Storage Configuration (cheapest option)
-    azure_storage_account: Optional[str] = None
-    azure_storage_key: Optional[str] = None
-    azure_container_name: str = "financial-documents"
-    azure_blob_tier: str = "Hot"  # Hot, Cool, Archive
-    azure_blob_type: str = "BlockBlob"  # BlockBlob, PageBlob, AppendBlob
-    
-    # Database Configuration (for document metadata)
-    database_type: str = "sqlite"  # sqlite, postgresql, mongodb
-    database_url: Optional[str] = None
-    postgres_host: Optional[str] = None
-    postgres_port: int = 5432
-    postgres_user: Optional[str] = None
-    postgres_password: Optional[str] = None
-    postgres_db: Optional[str] = None
-    
-    # MongoDB Atlas Configuration (cheapest option)
-    mongodb_connection_string: Optional[str] = None
-    mongodb_database_name: str = "financial_chatbot"
+    # Database Configuration (for document metadata - in-memory only)
+    database_type: str = "memory"  # memory only for session-based processing
     
     # Application Settings
     debug: bool = False
@@ -85,6 +54,11 @@ class Settings(BaseSettings):
     summary_max_length: int = 500
     mcq_num_questions: int = 5
     analytics_confidence_threshold: float = 0.8
+    
+    # Document Processing Settings
+    max_chunk_size: int = 1000
+    chunk_overlap: int = 200
+    max_file_size_mb: int = 50
     
     class Config:
         env_file = ".env"

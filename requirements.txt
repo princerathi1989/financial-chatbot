@@ -21,14 +21,7 @@ tiktoken>=0.5.0
 # Cloud Vector Store - Pinecone - Production Ready (REST API, no gRPC)
 pinecone>=3.0.0
 
-# Cloud Vector Store - Zilliz (Milvus) - Production Ready
-# pymilvus==2.3.4  # Commented out due to grpcio build issues
-
-# Cloud Storage - Azure Blob - Production Ready  
-azure-storage-blob==12.19.0
-
-# Database - MongoDB Atlas - Production Ready
-pymongo==4.6.0
+# Cloud Vector Store - Pinecone only for vector indexing
 
 # Data analysis (for analytics agent)
 numpy>=1.26.0
