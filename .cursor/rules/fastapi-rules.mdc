@@ -1,0 +1,57 @@
+---
+description: FastAPI Application Rules and Best Practices
+globs: ["main.py", "api/**/*.py"]
+alwaysApply: true
+---
+
+# FastAPI Application Rules
+
+## API Design Standards
+- Use descriptive endpoint names that reflect their functionality
+- Implement proper HTTP status codes (200, 201, 400, 404, 500)
+- Always include comprehensive error handling with try-catch blocks
+- Use Pydantic models for request/response validation
+- Implement proper CORS configuration for production
+
+## Endpoint Structure
+- Group related endpoints logically
+- Use dependency injection for common functionality
+- Implement proper request validation
+- Return consistent response formats
+- Include proper API documentation with descriptions
+
+## Error Handling
+- Use HTTPException for API errors with appropriate status codes
+- Implement global exception handlers for unhandled errors
+- Log all errors with appropriate context
+- Return user-friendly error messages
+- Include error codes for client-side handling
+
+## Security Considerations
+- Validate file uploads (type, size, content)
+- Implement rate limiting for API endpoints
+- Use proper authentication/authorization where needed
+- Sanitize all user inputs
+- Implement proper CORS policies
+
+## Performance
+- Use async/await for I/O operations
+- Implement proper caching where appropriate
+- Use connection pooling for database operations
+- Implement request timeouts
+- Monitor API response times
+
+## Example Structure
+```python
+@app.post("/endpoint", response_model=ResponseModel)
+async def endpoint_function(request: RequestModel):
+    try:
+        # Implementation
+        return response
+    except SpecificException as e:
+        logger.error(f"Specific error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+```

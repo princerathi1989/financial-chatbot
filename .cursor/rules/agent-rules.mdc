@@ -1,0 +1,94 @@
+---
+description: LangChain/LangGraph Agent Implementation Standards for Financial Applications
+globs: ["agents/**/*.py"]
+alwaysApply: true
+---
+
+# LangChain/LangGraph Agent Implementation Rules
+
+## LangChain Agent Architecture
+- Use LangChain's agent framework for financial agent implementations
+- Implement proper LangChain tools for financial operations
+- Use LangChain prompts and chains for financial workflows
+- Integrate LangSmith for tracing and monitoring financial agent operations
+- Implement proper error handling and logging throughout
+
+## Required LangChain Components
+- `process_query(message: str, document_id: Optional[str])` - Handle financial queries using LangChain
+- `process_document(document_id: str)` - Process financial documents with LangChain loaders
+- `create_financial_tools()` - Create LangChain tools for financial operations
+- `setup_langsmith_tracing()` - Configure LangSmith for financial agent tracing
+
+## LangChain Tool Implementation
+- Create financial-specific LangChain tools
+- Implement proper tool descriptions for financial operations
+- Use LangChain's tool calling for financial calculations
+- Add financial data validation in tools
+- Implement proper error handling for financial tools
+
+## LangGraph Integration (if applicable)
+- Use LangGraph for multi-agent financial workflows
+- Implement proper state management for financial data
+- Define financial agent routing and communication
+- Use LangGraph nodes for financial processing steps
+- Implement proper financial workflow orchestration
+
+## Financial Agent Patterns
+- **Financial RAG Agent**: Use LangChain retrievers for financial document search
+- **Financial Analysis Agent**: Use LangChain tools for financial calculations
+- **Financial Summarization Agent**: Use LangChain chains for financial document summarization
+- **Financial Analytics Agent**: Use LangChain tools for financial data analysis
+
+## Error Handling
+- Always wrap LangChain operations in try-catch blocks
+- Log errors with sufficient context for financial debugging
+- Return meaningful error messages for financial operations
+- Implement fallback mechanisms for LangChain service failures
+- Use structured logging with correlation IDs for financial operations
+
+## LangSmith Integration
+- Configure LangSmith tracing for all financial agents
+- Use proper project names for financial agent tracing
+- Implement proper tagging for financial operations
+- Add financial-specific metadata to traces
+- Monitor financial agent performance and costs
+
+## Configuration Management
+- Use settings from core.config for LangChain configuration
+- Implement proper environment variable handling for LangSmith
+- Use type hints for all LangChain configuration parameters
+- Validate LangChain configuration on startup
+
+## Testing Requirements
+- Implement unit tests for LangChain agent methods
+- Test LangChain tool functionality
+- Mock LangChain external dependencies
+- Test with various financial input scenarios
+- Validate LangChain response formats
+
+## Example LangChain Agent Structure
+```python
+from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain.tools import Tool
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langsmith import traceable
+
+class FinancialRAGAgent:
+    def __init__(self, config: Settings):
+        self.config = config
+        self.llm = ChatOpenAI(model=config.openai_model)
+        self.tools = self._create_financial_tools()
+        self.agent = self._create_agent()
+        self.logger = logger.bind(agent=self.__class__.__name__)
+    
+    @traceable
+    def process_query(self, message: str, document_id: Optional[str] = None):
+        try:
+            # LangChain agent execution
+            result = self.agent_executor.invoke({"input": message})
+            return self.format_financial_response(result)
+        except Exception as e:
+            self.logger.error(f"Error processing financial query: {e}")
+            raise FinancialAgentError(f"Failed to process query: {str(e)}")
+```

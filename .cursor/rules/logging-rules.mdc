@@ -1,0 +1,74 @@
+---
+description: Logging and Monitoring Standards
+globs: ["**/*.py"]
+alwaysApply: true
+---
+
+# Logging and Monitoring Rules
+
+## Logging Standards
+- Use structured logging with consistent format
+- Include correlation IDs for request tracing
+- Use appropriate log levels (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- Log all important business events and errors
+- Include sufficient context in log messages
+
+## Log Message Format
+- Use consistent log message format across the application
+- Include relevant context (user_id, request_id, agent_type, etc.)
+- Use proper log levels for different types of events
+- Avoid logging sensitive information (passwords, API keys, etc.)
+- Include timing information for performance monitoring
+
+## Error Logging
+- Log all exceptions with full stack traces
+- Include context about what operation was being performed
+- Use proper error categorization
+- Implement proper error aggregation
+- Include user-friendly error messages
+
+## Performance Monitoring
+- Log performance metrics for critical operations
+- Include timing information for API calls
+- Monitor resource usage (CPU, memory, disk)
+- Track business metrics (requests per second, error rates)
+- Implement proper alerting thresholds
+
+## Security Logging
+- Log all security-related events
+- Include proper audit trails for sensitive operations
+- Log authentication and authorization events
+- Monitor for suspicious activities
+- Implement proper log retention policies
+
+## Example Logging Implementation
+```python
+import structlog
+from loguru import logger
+
+# Configure structured logging
+logger = logger.bind(
+    service="multi-agent-chatbot",
+    version="1.0.0"
+)
+
+# Usage examples
+logger.info("Processing request", 
+           request_id=request_id, 
+           agent_type=agent_type,
+           user_id=user_id)
+
+logger.error("Failed to process document", 
+            document_id=document_id,
+            error=str(e),
+            exc_info=True)
+
+# Performance logging
+import time
+start_time = time.time()
+# ... operation ...
+logger.info("Operation completed", 
+           operation="document_processing",
+           duration=time.time() - start_time,
+           document_id=document_id)
+```
