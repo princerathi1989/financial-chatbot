@@ -451,12 +451,12 @@ class FinancialChatbotUI:
         except:
             return False
     
-    def send_message(self, message: str, agent_type: str, document_id: Optional[str] = None) -> Dict:
+    def send_message(self, message: str, agent_type: Optional[str] = None, document_id: Optional[str] = None) -> Dict:
         """Send a message to the API and get response."""
         try:
             payload = {
                 "message": message,
-                "agent_type": agent_type.lower(),
+                "agent_type": agent_type.lower() if agent_type else None,
                 "document_id": document_id
             }
             
@@ -835,7 +835,7 @@ class FinancialChatbotUI:
             loading_placeholder.empty()
             st.error(f"❌ Upload failed: {str(e)}")
     
-    def render_chat_interface(self, selected_agent: str):
+    def render_chat_interface(self):
         """Render the chat interface using Streamlit's native components."""
         # Initialize session state
         if "messages" not in st.session_state:
@@ -898,7 +898,7 @@ class FinancialChatbotUI:
         st.markdown("---")
         st.markdown("### 💬 Send Message")
         user_input = st.chat_input(
-            f"Ask {self.agents[selected_agent]['name']}...",
+            "Ask me anything about your financial documents...",
             key="chat_input"
         )
         
@@ -912,26 +912,33 @@ class FinancialChatbotUI:
                 "timestamp": timestamp
             })
             
-            # Get document ID based on agent type
-            document_id = None
-            if selected_agent in ["RAG", "SUMMARIZATION", "MCQ"]:
-                document_id = st.session_state.get("pdf_document_id")
-                if not document_id:
-                    st.error("❌ Please upload and select a PDF document first!")
-                    st.stop()
+            # Check if documents are available
+            pdf_docs = st.session_state.get('uploaded_pdf_documents', [])
+            csv_docs = st.session_state.get('uploaded_csv_documents', [])
+            total_docs = len(pdf_docs) + len(csv_docs)
             
-            # Send to API and get response
-            with st.spinner(f"🤖 {self.agents[selected_agent]['name']} is thinking..."):
-                response = self.send_message(user_input, selected_agent, document_id)
+            if total_docs == 0:
+                st.error("❌ Please upload documents first!")
+                st.stop()
+            
+            # Send to API and get response (automatic agent selection)
+            with st.spinner("🤖 Analyzing your question..."):
+                response = self.send_message(user_input, None, None)
             
             # Add bot response to chat
             if "error" not in response:
                 bot_message = response.get("response", "No response received")
                 sources = response.get("sources", [])
+                agent_type = response.get("agent_type", "RAG")
+                
+                # Show which agent was used
+                agent_name = self.agents.get(agent_type, {}).get("name", "Financial Agent")
+                
                 st.session_state.messages.append({
                     "content": bot_message,
                     "is_user": False,
-                    "agent_type": selected_agent,
+                    "agent_type": agent_type,
+                    "agent_name": agent_name,
                     "timestamp": datetime.now().strftime("%H:%M"),
                     "sources": sources
                 })
@@ -939,7 +946,8 @@ class FinancialChatbotUI:
                 st.session_state.messages.append({
                     "content": f"❌ Error: {response['error']}",
                     "is_user": False,
-                    "agent_type": selected_agent,
+                    "agent_type": "RAG",
+                    "agent_name": "Financial Agent",
                     "timestamp": datetime.now().strftime("%H:%M"),
                     "sources": []
                 })
@@ -997,7 +1005,7 @@ class FinancialChatbotUI:
         
         # Header
         st.markdown("""
-        <div style="text-align: center; padding: 20px; background: linear-gradient(90deg, #007bff, #28a745); color: white; border-radius: 10px; margin-bottom: 20px;">
+        <div style="text-align: center; padding: 10px; background: linear-gradient(90deg, #007bff, #28a745); color: white; border-radius: 10px; margin-bottom: 20px;">
             <h1>🤖 Financial Multi-Agent Chatbot</h1>
             <p>AI-powered financial document analysis and insights</p>
         </div>
@@ -1028,47 +1036,8 @@ class FinancialChatbotUI:
             else:
                 st.write("📁 No files selected")
         
-        # Row 2: PDF Document Selection and Agent Selection
-        col3, col4 = st.columns([1, 1])
-        
-        with col3:
-            # PDF Document Selection
-            pdf_docs = st.session_state.get('uploaded_pdf_documents', [])
-            if pdf_docs:
-                pdf_options = {f"{doc['filename']}": doc['id'] for doc in pdf_docs}
-                selected_pdf_filename = st.selectbox(
-                    "Select PDF document:",
-                    options=[""] + list(pdf_options.keys()),
-                    key="pdf_selector_main"
-                )
-                
-                if selected_pdf_filename:
-                    st.session_state.pdf_document_id = pdf_options[selected_pdf_filename]
-                    st.success(f"📄 Selected: {selected_pdf_filename}")
-                else:
-                    st.session_state.pdf_document_id = None
-                    st.warning("📄 Please select a PDF document")
-            else:
-                st.warning("📄 No PDF documents uploaded yet")
-        
-        with col4:
-            # Agent selection dropdown
-            agent_options = {
-                "RAG": "🤖 Universal Financial Agent (Q&A + Analytics)",
-                "SUMMARIZATION": "📝 Summarization Agent",
-                "MCQ": "❓ MCQ Generation Agent"
-            }
-            
-            selected_agent = st.selectbox(
-                "Select Agent:",
-                options=list(agent_options.keys()),
-                format_func=lambda x: agent_options[x],
-                key="agent_selector"
-            )
-            st.session_state.selected_agent = selected_agent
-        
         # Main content area
-        self.render_chat_interface(selected_agent)
+        self.render_chat_interface()
 
 def main():
     """Main function to run the Streamlit app."""

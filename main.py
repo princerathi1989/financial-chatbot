@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from typing import List, Optional
 from loguru import logger
 import os
+from contextlib import asynccontextmanager
 
 from core.config import settings, ensure_directories, setup_langsmith
 from models.schemas import (
@@ -20,13 +21,25 @@ ensure_directories()
 # Setup LangSmith tracing
 setup_langsmith()
 
-# Create FastAPI app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    logger.info("Starting Financial Multi-Agent Chatbot API")
+    logger.info(f"Debug mode: {settings.debug}")
+    logger.info(f"OpenAI model: {settings.openai_model}")
+    yield
+    # Shutdown
+    logger.info("Shutting down Financial Multi-Agent Chatbot API")
+
+
+# Create FastAPI app with lifespan
 app = FastAPI(
     title="Financial Multi-Agent Chatbot",
     description="A production-style POC for ingesting financial PDFs and CSVs with multi-agent capabilities",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # Add CORS middleware
@@ -42,18 +55,6 @@ app.add_middleware(
 logger.add("logs/chatbot.log", rotation="1 day", retention="7 days", level=settings.log_level)
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize the application on startup."""
-    logger.info("Starting Financial Multi-Agent Chatbot API")
-    logger.info(f"Debug mode: {settings.debug}")
-    logger.info(f"OpenAI model: {settings.openai_model}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on application shutdown."""
-    logger.info("Shutting down Financial Multi-Agent Chatbot API")
 
 
 @app.get("/", response_model=dict)

@@ -20,7 +20,7 @@ class FinancialWorkflow:
         self.llm = ChatOpenAI(
             model=settings.openai_model,
             temperature=0.1,
-            max_tokens=2000
+            max_tokens=500  # Set to 500 for moderate short responses
         )
         self.logger = logger.bind(component="financial_workflow")
         self.graph = self._create_workflow()
@@ -65,10 +65,16 @@ class FinancialWorkflow:
         try:
             message = state["message"].lower()
             
-            # Determine agent type based on keywords
-            if any(keyword in message for keyword in ["summarize", "summary", "executive summary", "key points"]):
+            # Determine agent type based on enhanced keywords
+            if any(keyword in message for keyword in [
+                "summarize", "summary", "executive summary", "key points", 
+                "overview", "brief", "synopsis", "recap", "highlights"
+            ]):
                 agent_type = "summarization"
-            elif any(keyword in message for keyword in ["quiz", "test", "questions", "mcq", "multiple choice"]):
+            elif any(keyword in message for keyword in [
+                "quiz", "test", "questions", "mcq", "multiple choice",
+                "examination", "assessment", "practice", "questions about"
+            ]):
                 agent_type = "mcq"
             else:
                 # Default to RAG for all other queries (including analytics queries)
@@ -102,20 +108,21 @@ class FinancialWorkflow:
             query = state["message"]
             document_id = state.get("document_id")
             
-            # Check if this is an analytics query
+            # Check if this is an analytics query and determine complexity
             is_analytics_query = self._is_analytics_query(query)
+            query_complexity = self._get_query_complexity(query)
             
-            # Retrieve relevant context
+            # Retrieve relevant context (search across all documents if no specific document_id)
             context_chunks = vector_store.search_similar_chunks(
                 query=query,
                 top_k=settings.rag_top_k_results,
-                document_id=document_id
+                document_id=None  # Search across all documents for multi-document search
             )
             
             if not context_chunks:
                 state["response"] = "I couldn't find relevant financial information in the uploaded documents to answer your question."
                 state["sources"] = []
-                state["metadata"] = {"context_chunks_found": 0}
+                state["metadata"] = {"context_chunks_found": 0, "agent_type": "rag"}
                 return state
             
             # Generate answer using LangChain with analytics awareness
@@ -130,7 +137,7 @@ class FinancialWorkflow:
                 doc_type = chunk.get('metadata', {}).get('file_type', 'unknown')
                 document_types.add(doc_type)
             
-            # Create analytics-aware prompt
+            # Create analytics-aware prompt with complexity information
             if is_analytics_query and 'csv' in document_types:
                 prompt = self._create_analytics_prompt()
             else:
@@ -140,7 +147,8 @@ class FinancialWorkflow:
             response = chain.invoke({
                 "context": context_text,
                 "question": query,
-                "document_types": ", ".join(document_types)
+                "document_types": ", ".join(document_types),
+                "complexity": query_complexity
             })
             
             # Prepare sources
@@ -160,6 +168,7 @@ class FinancialWorkflow:
                 "document_id": document_id,
                 "agent_type": "rag",
                 "is_analytics_query": is_analytics_query,
+                "query_complexity": query_complexity,
                 "document_types": list(document_types)
             }
             
@@ -169,6 +178,7 @@ class FinancialWorkflow:
             self.logger.error(f"Error in RAG agent: {e}")
             state["error"] = str(e)
             state["response"] = "I encountered an error while processing your financial question. Please try again."
+            state["metadata"] = {"agent_type": "rag", "error": str(e)}
             return state
     
     def _is_analytics_query(self, query: str) -> bool:
@@ -182,10 +192,33 @@ class FinancialWorkflow:
         query_lower = query.lower()
         return any(keyword in query_lower for keyword in analytics_keywords)
     
+    def _get_query_complexity(self, query: str) -> str:
+        """Determine query complexity for dynamic response length."""
+        query_lower = query.lower()
+        
+        # Simple queries (1-2 paragraphs)
+        simple_keywords = ["what is", "define", "explain briefly", "quick", "simple", "basic"]
+        if any(keyword in query_lower for keyword in simple_keywords):
+            return "simple"
+        
+        # Complex queries (3-4 paragraphs)
+        complex_keywords = [
+            "comprehensive", "detailed", "thorough", "complete analysis", 
+            "compare and contrast", "pros and cons", "advantages and disadvantages",
+            "step by step", "how to", "process", "methodology", "strategy"
+        ]
+        if any(keyword in query_lower for keyword in complex_keywords):
+            return "complex"
+        
+        # Moderate queries (2-3 paragraphs) - default
+        return "moderate"
+    
     def _create_analytics_prompt(self) -> ChatPromptTemplate:
-        """Create prompt for analytics queries."""
+        """Create prompt for analytics queries with dynamic length control."""
         return ChatPromptTemplate.from_template("""
 You are a senior financial analyst and expert assistant specializing in financial document analysis, Q&A, and data analytics.
+
+CRITICAL: Keep your response EXTREMELY SHORT - maximum 1-2 sentences or 1 short paragraph. Be direct and concise.
 
 Context from financial documents (including CSV data):
 {context}
@@ -193,15 +226,23 @@ Context from financial documents (including CSV data):
 Question: {question}
 
 Instructions for Analytics Queries:
-- Analyze the financial data and provide comprehensive insights
+- Analyze the financial data and provide concise insights
 - Calculate relevant KPIs, ratios, and metrics when possible
-- Identify trends, patterns, and anomalies in the data
+- Identify key trends, patterns, and anomalies in the data
 - Provide quantitative analysis with specific numbers and percentages
 - Compare different time periods or categories when relevant
 - Highlight key business insights and recommendations
 - Use proper financial terminology and maintain professional tone
 - If CSV data is present, perform statistical analysis and calculations
 - Cite specific data points and sources in your analysis
+- BE CONCISE: Focus on essential information only
+
+Response Length Guidelines (Query Complexity: {complexity}):
+- ALWAYS keep responses to 1-2 paragraphs maximum
+- Be concise and direct - avoid unnecessary elaboration
+- Focus on key information and actionable insights only
+- Prioritize clarity and brevity over comprehensive detail
+- Use bullet points when appropriate for better readability
 
 Document Types Available: {document_types}
 
@@ -209,9 +250,11 @@ Answer with detailed analytics:
 """)
     
     def _create_standard_prompt(self) -> ChatPromptTemplate:
-        """Create prompt for standard Q&A queries."""
+        """Create prompt for standard Q&A queries with dynamic length control."""
         return ChatPromptTemplate.from_template("""
 You are a senior financial analyst and expert assistant specializing in financial document analysis and Q&A.
+
+CRITICAL: Keep your response EXTREMELY SHORT - maximum 1-2 sentences or 1 short paragraph. Be direct and concise.
 
 Context from financial documents:
 {context}
@@ -219,36 +262,36 @@ Context from financial documents:
 Question: {question}
 
 Instructions:
-- Provide a comprehensive and accurate answer based on the financial context provided
+- Provide a concise and accurate answer based on the financial context provided
 - If the context doesn't contain enough information, clearly state this limitation
 - Cite specific information from the sources when possible
 - Be precise and professional in your response
 - Focus on financial insights, metrics, and analysis
 - Use proper financial terminology and maintain professional tone
 - Handle both PDF and CSV data appropriately
+- BE CONCISE: Focus on essential information only
+
+Response Length Guidelines (Query Complexity: {complexity}):
+- ALWAYS keep responses to 1-2 paragraphs maximum
+- Be concise and direct - avoid unnecessary elaboration
+- Focus on key information and actionable insights only
+- Prioritize clarity and brevity over comprehensive detail
+- Use bullet points when appropriate for better readability
 
 Answer:
 """)
     
     @traceable(name="financial_summarization_agent")
     def _summarization_agent_node(self, state: FinancialState) -> FinancialState:
-        """Summarization agent node."""
+        """Summarization agent node for multi-document summarization."""
         try:
-            document_id = state.get("document_id")
-            
-            if not document_id:
-                state["response"] = "Please specify a document ID to generate a summary."
-                state["sources"] = []
-                state["metadata"] = {}
-                return state
-            
-            # Get document chunks
-            chunks = vector_store.get_document_chunks(document_id)
+            # Get all document chunks for comprehensive summarization
+            chunks = vector_store.get_all_chunks()
             
             if not chunks:
                 state["response"] = "No document content found for summarization."
                 state["sources"] = []
-                state["metadata"] = {}
+                state["metadata"] = {"agent_type": "summarization"}
                 return state
             
             # Combine chunks for summarization
@@ -281,7 +324,7 @@ KEY QUOTES:
             response = chain.invoke({"document_content": full_text[:4000]})
             
             state["response"] = response.content.strip()
-            state["sources"] = [{"type": "summary", "document_id": document_id}]
+            state["sources"] = [{"type": "summary", "document_id": "multi-document"}]
             state["metadata"] = {
                 "agent_type": "summarization",
                 "word_count": len(full_text.split())
@@ -293,27 +336,20 @@ KEY QUOTES:
             self.logger.error(f"Error in summarization agent: {e}")
             state["error"] = str(e)
             state["response"] = "I encountered an error while generating the summary. Please try again."
+            state["metadata"] = {"agent_type": "summarization", "error": str(e)}
             return state
     
     @traceable(name="financial_mcq_agent")
     def _mcq_agent_node(self, state: FinancialState) -> FinancialState:
-        """MCQ generation agent node."""
+        """MCQ generation agent node for multi-document content."""
         try:
-            document_id = state.get("document_id")
-            
-            if not document_id:
-                state["response"] = "Please specify a document ID to generate MCQ questions."
-                state["sources"] = []
-                state["metadata"] = {}
-                return state
-            
-            # Get document chunks
-            chunks = vector_store.get_document_chunks(document_id)
+            # Get all document chunks for comprehensive MCQ generation
+            chunks = vector_store.get_all_chunks()
             
             if not chunks:
                 state["response"] = "No document content found for MCQ generation."
                 state["sources"] = []
-                state["metadata"] = {}
+                state["metadata"] = {"agent_type": "mcq"}
                 return state
             
             # Combine chunks for MCQ generation
@@ -352,7 +388,7 @@ Rationale: [Explanation]
             })
             
             state["response"] = response.content.strip()
-            state["sources"] = [{"type": "mcq", "document_id": document_id}]
+            state["sources"] = [{"type": "mcq", "document_id": "multi-document"}]
             state["metadata"] = {
                 "agent_type": "mcq",
                 "num_questions": settings.mcq_num_questions
@@ -364,6 +400,7 @@ Rationale: [Explanation]
             self.logger.error(f"Error in MCQ agent: {e}")
             state["error"] = str(e)
             state["response"] = "I encountered an error while generating MCQ questions. Please try again."
+            state["metadata"] = {"agent_type": "mcq", "error": str(e)}
             return state
     
     
