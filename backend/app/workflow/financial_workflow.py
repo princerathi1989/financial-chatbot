@@ -9,8 +9,8 @@ from langsmith import traceable
 from loguru import logger
 
 from .state import FinancialState, FinancialRequest, FinancialResponse
-from core.config import settings
-from storage.vector_store import vector_store
+from app.core.config import settings
+from app.storage.vector_store import vector_store
 
 
 class FinancialWorkflow:

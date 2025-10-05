@@ -33,50 +33,31 @@ Check the health status of the API.
 
 ### Document Upload
 
-#### POST /upload/pdf
+#### POST /upload/multiple
 
-Upload and process a PDF document.
-
-**Request:**
-- Content-Type: `multipart/form-data`
-- Body: PDF file
-
-**Response:**
-```json
-{
-  "document_id": "doc_123456",
-  "filename": "document.pdf",
-  "document_type": "pdf",
-  "status": "processed",
-  "metadata": {
-    "total_chunks": 25,
-    "total_words": 5000,
-    "file_size": 1024000
-  }
-}
-```
-
-#### POST /upload/csv
-
-Upload and process a CSV document.
+Upload and process one or more PDF/CSV documents.
 
 **Request:**
 - Content-Type: `multipart/form-data`
-- Body: CSV file
+- Body: repeatable field name `files` (supports up to 10 files)
 
 **Response:**
+Returns a JSON array of `DocumentUploadResponse` items.
+
 ```json
-{
-  "document_id": "doc_789012",
-  "filename": "data.csv",
-  "document_type": "csv",
-  "status": "processed",
-  "metadata": {
-    "total_rows": 1000,
-    "total_columns": 10,
-    "file_size": 512000
+[
+  {
+    "document_id": "3334d636-f573-4836-9770-160f4afa1f29",
+    "filename": "document.pdf",
+    "document_type": "pdf",
+    "status": "processed",
+    "metadata": {
+      "total_chunks": 25,
+      "total_words": 5000,
+      "file_size": 1024000
+    }
   }
-}
+]
 ```
 
 ### Chat Interface
@@ -98,18 +79,26 @@ Send a message to the multi-agent system.
 **Response:**
 ```json
 {
-  "response": "The main topic of the document is...",
+  "response": "The main topic of the document is ...",
   "agent_type": "rag",
   "sources": [
     {
-      "type": "document",
-      "document_id": "doc_123456",
-      "chunk_id": "chunk_001"
+      "content": "Quarterly revenue grew 12% ...",
+      "metadata": {
+        "document_id": "doc_123456",
+        "chunk_index": 0,
+        "file_type": "pdf",
+        "filename": "document.pdf"
+      },
+      "relevance_score": 0.92,
+      "document_type": "pdf"
     }
   ],
   "metadata": {
-    "confidence": 0.95,
-    "processing_time": 1.2
+    "context_chunks_found": 5,
+    "agent_type": "rag",
+    "is_analytics_query": false,
+    "document_types": ["pdf"]
   }
 }
 ```
@@ -205,8 +194,8 @@ Get system statistics and status.
   "pdf_documents": 7,
   "csv_documents": 3,
   "vector_store": {
-    "total_vectors": 250,
-    "collection_size": "50MB"
+    "total_chunks": 250,
+    "collection_name": "financial-documents"
   },
   "agents": {
     "rag": "active",
@@ -336,11 +325,12 @@ Currently, no rate limiting is implemented. In production, implement appropriate
 
 ### Complete Workflow Example
 
-1. **Upload a PDF document:**
+1. **Upload PDF/CSV documents:**
 ```bash
-curl -X POST "http://localhost:8000/upload/pdf" \
+curl -X POST "http://localhost:8000/upload/multiple" \
   -H "Content-Type: multipart/form-data" \
-  -F "file=@document.pdf"
+  -F "files=@document.pdf" \
+  -F "files=@data.csv"
 ```
 
 2. **Ask a question about the document:**
@@ -372,49 +362,50 @@ curl -X POST "http://localhost:8000/chat" \
 ```python
 import requests
 
-# Upload document
-with open('document.pdf', 'rb') as f:
-    response = requests.post(
-        'http://localhost:8000/upload/pdf',
-        files={'file': f}
-    )
-    document_id = response.json()['document_id']
+# Upload documents
+files = [
+    ('files', ('document.pdf', open('document.pdf', 'rb'), 'application/pdf')),
+    ('files', ('data.csv', open('data.csv', 'rb'), 'text/csv')),
+]
+upload_resp = requests.post('http://localhost:8000/upload/multiple', files=files)
+upload_resp.raise_for_status()
+first_doc_id = upload_resp.json()[0]['document_id']
 
 # Ask question
-response = requests.post(
+chat_resp = requests.post(
     'http://localhost:8000/chat',
     json={
         'message': 'What is the main topic?',
         'agent_type': 'rag',
-        'document_id': document_id
+        'document_id': first_doc_id
     }
 )
-print(response.json()['response'])
+print(chat_resp.json()['response'])
 ```
 
 ### JavaScript SDK
 
 ```javascript
-// Upload document
+// Upload documents
 const formData = new FormData();
-formData.append('file', fileInput.files[0]);
+formData.append('files', pdfFile);
+formData.append('files', csvFile);
 
-const uploadResponse = await fetch('/upload/pdf', {
+const uploadResponse = await fetch('/upload/multiple', {
   method: 'POST',
   body: formData
 });
-const { document_id } = await uploadResponse.json();
+const uploads = await uploadResponse.json();
+const document_id = uploads[0].document_id;
 
 // Ask question
 const chatResponse = await fetch('/chat', {
   method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
+  headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     message: 'What is the main topic?',
     agent_type: 'rag',
-    document_id: document_id
+    document_id
   })
 });
 const { response } = await chatResponse.json();

@@ -2,11 +2,11 @@
 
 from typing import Dict, Any, Optional, List
 from loguru import logger
-from core.config import settings
-from models.schemas import ChatRequest, ChatResponse, AgentType, DocumentUploadResponse
-from workflow.financial_workflow import FinancialWorkflow, FinancialRequest
-from ingestion.pipeline import DocumentIngestionPipeline
-from storage.vector_store import vector_store
+from app.core.config import settings
+from app.models.schemas import ChatRequest, ChatResponse, AgentType, DocumentUploadResponse
+from app.workflow.financial_workflow import FinancialWorkflow, FinancialRequest
+from app.ingestion.pipeline import DocumentIngestionPipeline
+from app.storage.vector_store import vector_store
 
 class EnhancedFinancialChatbot:
     """Enhanced chatbot focused on user-uploaded documents."""

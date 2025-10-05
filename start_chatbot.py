@@ -1,129 +1,143 @@
 #!/usr/bin/env python3
 """
-Startup script for Financial Multi-Agent Chatbot
-Runs both FastAPI backend and Streamlit frontend
-"""
+Unified launcher for the Financial Chatbot (backend + frontend).
 
+Usage:
+  python start_chatbot.py [--no-frontend] [--api-port 8000] [--ui-port 8501] [--host 0.0.0.0]
+
+This script sets PYTHONPATH for the backend, starts the FastAPI app (uvicorn),
+and optionally starts the Streamlit UI.
+"""
+import argparse
+import os
+import signal
 import subprocess
 import sys
 import time
-import os
-import signal
 from pathlib import Path
-from dotenv import load_dotenv
+import shutil
 
-load_dotenv()
 
-def check_dependencies():
-    """Check if required dependencies are installed."""
+def extend_pythonpath(path: str) -> None:
+    current = os.environ.get("PYTHONPATH", "")
+    if current:
+        os.environ["PYTHONPATH"] = f"{path}:{current}"
+    else:
+        os.environ["PYTHONPATH"] = path
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Start backend and Streamlit UI")
+    parser.add_argument("--no-frontend", action="store_true", help="Do not start Streamlit UI")
+    parser.add_argument("--api-port", type=int, default=8000, help="Port for the FastAPI server")
+    parser.add_argument("--ui-port", type=int, default=8501, help="Port for the Streamlit UI")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host interface for FastAPI")
+    parser.add_argument("--reload", action="store_true", help="Enable uvicorn auto-reload")
+    return parser.parse_args()
+
+
+def main() -> int:
+    repo_root = Path(__file__).resolve().parent
+    backend_app_path = repo_root / "backend" / "app"
+    uvicorn_app_module = "backend.uvicorn_app:app"
+    streamlit_app_path = repo_root / "frontend" / "streamlit_app" / "app.py"
+
+    # Ensure backend is importable
+    extend_pythonpath(str(backend_app_path))
+
+    args = parse_args()
+
+    # Clear uploads directory on startup (recreated via ensure_directories)
     try:
-        import streamlit
-        import fastapi
-        import uvicorn
-        print("✅ All dependencies are installed")
-        return True
-    except ImportError as e:
-        print(f"❌ Missing dependency: {e}")
-        print("Please install requirements: pip install -r requirements.txt")
-        return False
+        from core.config import settings, ensure_directories
+        uploads_dir = Path(settings.upload_directory)
+        if uploads_dir.exists():
+            shutil.rmtree(uploads_dir, ignore_errors=True)
+        ensure_directories()
+    except Exception as e:
+        print(f"Warning: failed to reset uploads directory: {e}")
 
-def start_backend():
-    """Start the FastAPI backend server."""
-    print("🚀 Starting FastAPI backend server...")
-    backend_process = subprocess.Popen([
-        sys.executable, "main.py"
-    ], cwd=Path(__file__).parent)
-    return backend_process
+    # Build uvicorn command
+    uvicorn_cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        uvicorn_app_module,
+        "--host",
+        args.host,
+        "--port",
+        str(args.api_port),
+    ]
+    if args.reload:
+        uvicorn_cmd.append("--reload")
 
-def start_frontend():
-    """Start the Streamlit frontend."""
-    print("🎨 Starting Streamlit frontend...")
-    frontend_process = subprocess.Popen([
-        sys.executable, "-m", "streamlit", "run", "streamlit_app.py",
-        "--server.port", "8501",
-        "--server.headless", "true"
-    ], cwd=Path(__file__).parent)
-    return frontend_process
-
-def wait_for_backend():
-    """Wait for backend to be ready."""
-    import requests
-    max_retries = 30
-    retry_count = 0
-    
-    print("⏳ Waiting for backend to start...")
-    while retry_count < max_retries:
-        try:
-            response = requests.get("http://localhost:8000/health", timeout=2)
-            if response.status_code == 200:
-                print("✅ Backend is ready!")
-                return True
-        except:
-            pass
-        
-        retry_count += 1
-        time.sleep(1)
-        print(f"⏳ Retrying... ({retry_count}/{max_retries})")
-    
-    print("❌ Backend failed to start")
-    return False
-
-def main():
-    """Main startup function."""
-    print("🤖 Financial Multi-Agent Chatbot Startup")
-    print("=" * 50)
-    
-    # Check dependencies
-    if not check_dependencies():
-        return
-    
-    # Check environment variables
-    if not os.getenv("OPENAI_API_KEY"):
-        print("❌ Error: OPENAI_API_KEY environment variable is required")
-        print("Please set your OpenAI API key:")
-        print("export OPENAI_API_KEY='your-api-key-here'")
-        return
-    
     processes = []
-    
     try:
-        # Start backend
-        backend_process = start_backend()
-        processes.append(backend_process)
-        
-        # Wait for backend to be ready
-        if not wait_for_backend():
-            print("❌ Failed to start backend")
-            return
-        
-        # Start frontend
-        frontend_process = start_frontend()
-        processes.append(frontend_process)
-        
-        print("\n🎉 Both servers are starting up!")
-        print("📡 Backend API: http://localhost:8000")
-        print("🎨 Frontend UI: http://localhost:8501")
-        print("📚 API Docs: http://localhost:8000/docs")
-        print("\nPress Ctrl+C to stop both servers")
-        
-        # Wait for processes
+        # Start backend (FastAPI)
+        backend_proc = subprocess.Popen(uvicorn_cmd, cwd=str(repo_root))
+        processes.append(("backend", backend_proc))
+
+        # Optionally start Streamlit
+        if not args.no_frontend:
+            if not streamlit_app_path.exists():
+                print(f"Streamlit app not found at {streamlit_app_path}")
+            else:
+                streamlit_cmd = [
+                    sys.executable,
+                    "-m",
+                    "streamlit",
+                    "run",
+                    str(streamlit_app_path),
+                    "--server.port",
+                    str(args.ui_port),
+                ]
+                frontend_proc = subprocess.Popen(streamlit_cmd, cwd=str(repo_root))
+                processes.append(("frontend", frontend_proc))
+
+        # Wait and forward signals
+        def handle_signal(signum, frame):
+            for name, proc in processes:
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+            time.sleep(0.5)
+            for name, proc in processes:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+
+        signal.signal(signal.SIGINT, handle_signal)
+        signal.signal(signal.SIGTERM, handle_signal)
+
+        # Monitor processes
         while True:
-            time.sleep(1)
-            # Check if any process has died
-            for i, process in enumerate(processes):
-                if process.poll() is not None:
-                    print(f"❌ Process {i} has stopped unexpectedly")
-                    return
-    
-    except KeyboardInterrupt:
-        print("\n🛑 Shutting down servers...")
-        for process in processes:
+            alive = False
+            for name, proc in processes:
+                ret = proc.poll()
+                if ret is None:
+                    alive = True
+                else:
+                    print(f"{name} exited with code {ret}")
+                    # If backend dies, stop frontend too
+                    if name == "backend":
+                        handle_signal(signal.SIGTERM, None)
+                        return ret if ret is not None else 1
+            if not alive:
+                return 0
+            time.sleep(0.5)
+    finally:
+        for name, proc in processes:
             try:
-                process.terminate()
-                process.wait(timeout=5)
-            except:
-                process.kill()
-        print("✅ Servers stopped")
+                proc.terminate()
+            except Exception:
+                pass
+
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
+
+

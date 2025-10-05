@@ -5,15 +5,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import List, Optional
 from loguru import logger
+import sys
 import os
 from contextlib import asynccontextmanager
 
-from core.config import settings, ensure_directories, setup_langsmith
-from models.schemas import (
+from app.core.config import settings, ensure_directories, setup_langsmith
+from app.models.schemas import (
     ChatRequest, ChatResponse, DocumentUploadResponse, 
     ErrorResponse, AgentType, DocumentType
 )
-from api.langgraph_chatbot import chatbot
+from app.api.langgraph_chatbot import chatbot
 
 # Ensure directories exist
 ensure_directories()
@@ -52,7 +53,9 @@ app.add_middleware(
 )
 
 # Configure logging
-logger.add("logs/chatbot.log", rotation="1 day", retention="7 days", level=settings.log_level)
+# Log to stdout instead of a file to avoid creating a logs/ directory
+logger.remove()
+logger.add(sys.stdout, level=settings.log_level)
 
 
 
@@ -244,7 +247,7 @@ async def delete_document(document_id: str):
 async def get_stats():
     """Get system statistics."""
     try:
-        from storage.vector_store import vector_store
+        from app.storage.vector_store import vector_store
         
         documents = chatbot.list_documents()
         vector_stats = vector_store.get_collection_stats()
@@ -295,7 +298,7 @@ async def general_exception_handler(request, exc):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "main:app",
+        "backend.uvicorn_app:app",
         host=settings.api_host,
         port=settings.api_port,
         reload=settings.reload,

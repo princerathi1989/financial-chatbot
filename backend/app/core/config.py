@@ -3,6 +3,7 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
 import os
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -19,9 +20,12 @@ class Settings(BaseSettings):
     langsmith_endpoint: str = "https://api.smith.langchain.com"
     langchain_tracing_v2: Optional[str] = None
     
-    # Database Configuration
-    chroma_persist_directory: str = "./storage/chroma_db"
-    upload_directory: str = "./storage/uploads"
+    # Storage directories (resolved relative to backend/app/storage)
+    # Compute base as backend/app/storage regardless of CWD
+    _storage_base_dir: Path = Path(__file__).resolve().parents[1] / "storage"
+    chroma_persist_directory: str = str((_storage_base_dir / "chroma_db").resolve())
+    upload_directory: str = str((_storage_base_dir / "uploads").resolve())
+    temp_directory: str = str((_storage_base_dir / "temp").resolve())
     
     # Production Cloud Configuration
     environment: str = "development"  # development, staging, production
@@ -72,9 +76,12 @@ settings = Settings()
 
 def ensure_directories():
     """Ensure required directories exist."""
-    os.makedirs(settings.chroma_persist_directory, exist_ok=True)
+    # Always ensure upload and temp directories
     os.makedirs(settings.upload_directory, exist_ok=True)
-    os.makedirs("./storage/temp", exist_ok=True)
+    os.makedirs(settings.temp_directory, exist_ok=True)
+    # Only create Chroma directory when Chroma is the selected vector store
+    if settings.vector_store_type.lower() == "chroma":
+        os.makedirs(settings.chroma_persist_directory, exist_ok=True)
 
 
 def setup_langsmith():

@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 import PyPDF2
 from loguru import logger
-from core.config import settings
+from app.core.config import settings
 
 
 class DocumentProcessor:

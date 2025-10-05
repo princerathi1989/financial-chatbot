@@ -8,21 +8,21 @@ This document provides comprehensive guidelines for developing and maintaining t
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd multi-agent-chatbot
+cd financial-chatbot
 
 # Create virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install backend dependencies
+pip install -r backend/requirements.txt
 
 # Set up environment variables
-cp .env.example .env
+cp env.example .env
 # Edit .env with your configuration
 
-# Run the application
-python main.py
+# Run the FastAPI application (development)
+python -m uvicorn backend.uvicorn_app:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 2. Code Standards
@@ -46,8 +46,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 # Local imports
-from core.config import settings
-from agents.rag_agent import RAGAgent
+from app.core.config import settings
+from app.workflow.financial_workflow import FinancialWorkflow
 ```
 
 #### Error Handling
@@ -63,34 +63,20 @@ except Exception as e:
     raise HTTPException(status_code=500, detail="Internal server error")
 ```
 
-### 3. Agent Development
+### 3. Workflow and Agents (LangGraph)
 
-#### Creating a New Agent
-1. Create agent file in `agents/` directory
-2. Implement required methods:
-   - `__init__(self, config: Settings)`
-   - `process_query(self, message: str, document_id: Optional[str])`
-   - `process_document(self, document_id: str)`
-3. Add agent to `MultiAgentChatbot.agents` dictionary
-4. Update `determine_agent_type()` method
-5. Add processing logic in `process_chat_message()`
-6. Create unit tests
+We use a LangGraph workflow instead of separate agent classes.
 
-#### Agent Interface
-```python
-class BaseAgent:
-    def __init__(self, config: Settings):
-        self.config = config
-        self.logger = logger.bind(agent=self.__class__.__name__)
-    
-    def process_query(self, message: str, document_id: Optional[str] = None) -> ChatResponse:
-        """Process a user query."""
-        raise NotImplementedError
-    
-    def process_document(self, document_id: str) -> Any:
-        """Process a specific document."""
-        raise NotImplementedError
-```
+- Location: `backend/app/workflow/financial_workflow.py`
+- Nodes: `router`, `rag_agent`, `summarization_agent`, `mcq_agent`, `error_handler`
+- State schema: `backend/app/workflow/state.py`
+
+To add a new capability:
+1. Add a node function in `FinancialWorkflow`.
+2. Register it in `_create_workflow()` and update `_router_node()`/`_route_decision()`.
+3. Provide prompts with `ChatPromptTemplate` and call `ChatOpenAI`.
+4. Update state outputs (`response`, `sources`, `metadata`).
+5. Add tests.
 
 ### 4. API Development
 
@@ -134,31 +120,19 @@ class ResponseModel(BaseModel):
 #### Unit Testing
 ```python
 import pytest
-from unittest.mock import Mock, patch
 
-class TestAgentFunctionality:
-    @pytest.fixture
-    def mock_dependencies(self):
-        return {
-            'vector_store': Mock(),
-            'openai_client': Mock()
-        }
-    
-    def test_agent_query_processing(self, mock_dependencies):
-        # Arrange
-        agent = RAGAgent(**mock_dependencies)
-        
-        # Act
-        result = agent.process_query("test query")
-        
-        # Assert
-        assert result.response is not None
-        assert result.agent_type == AgentType.RAG
+def test_router_defaults_to_rag():
+    from app.workflow.financial_workflow import FinancialWorkflow
+    wf = FinancialWorkflow()
+    state = {"message": "What is EBITDA?"}
+    routed = wf._router_node(state)  # private in code; test via graph in real tests
+    assert routed["next_agent"] == "rag"
 ```
 
 #### Integration Testing
 ```python
 from fastapi.testclient import TestClient
+from backend.uvicorn_app import app
 
 def test_api_endpoint():
     client = TestClient(app)
@@ -176,6 +150,15 @@ class Settings(BaseSettings):
     openai_api_key: str
     
     # Optional settings with defaults
+    openai_model: str = "gpt-4-turbo-preview"
+    openai_embedding_model: str = "text-embedding-3-small"
+    vector_store_type: str = "pinecone"
+    pinecone_api_key: Optional[str] = None
+    pinecone_environment: str = "us-east-1"
+    pinecone_index_name: str = "financial-documents"
+    rag_top_k_results: int = 5
+    max_chunk_size: int = 1000
+    chunk_overlap: int = 200
     debug: bool = False
     log_level: str = "INFO"
     
@@ -277,13 +260,13 @@ if not api_key:
 FROM python:3.11-slim
 
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN pip install -r backend/requirements.txt
 
 COPY . .
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "backend.uvicorn_app:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 #### Environment Configuration
@@ -297,9 +280,10 @@ services:
       - "8000:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - DEBUG=false
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
     volumes:
-      - ./storage:/app/storage
+      - ./backend/app/storage:/app/backend/app/storage
 ```
 
 ## Troubleshooting
