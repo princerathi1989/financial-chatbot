@@ -4,7 +4,6 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import List, Optional
-import aiofiles
 from loguru import logger
 import os
 
@@ -64,7 +63,7 @@ async def root():
         "message": "Financial Multi-Agent Chatbot API",
         "version": "1.0.0",
         "docs": "/docs",
-        "agents": ["rag", "summarization", "mcq", "analytics"],
+        "agents": ["rag", "summarization", "mcq"],
         "supported_formats": ["pdf", "csv"]
     }
 
@@ -162,10 +161,10 @@ async def get_agent_info(agent_type: AgentType):
     """Get information about a specific agent."""
     agent_info = {
         AgentType.RAG: {
-            "name": "RAG Agent",
-            "description": "Question-answering over PDF documents using retrieval-augmented generation",
-            "capabilities": ["Document Q&A", "Context retrieval", "Citation tracking"],
-            "input_requirements": ["PDF documents", "Natural language questions"]
+            "name": "Universal Financial Agent",
+            "description": "Question-answering and analytics over PDF and CSV documents using retrieval-augmented generation",
+            "capabilities": ["Document Q&A", "Analytics & KPIs", "Trend analysis", "Context retrieval", "Citation tracking", "Data insights"],
+            "input_requirements": ["PDF and CSV documents", "Natural language questions", "Analytics queries"]
         },
         AgentType.SUMMARIZATION: {
             "name": "Summarization Agent",
@@ -178,12 +177,6 @@ async def get_agent_info(agent_type: AgentType):
             "description": "Generates multiple choice questions with answers and rationales",
             "capabilities": ["Question generation", "Answer validation", "Educational content"],
             "input_requirements": ["PDF documents", "Topic specification (optional)"]
-        },
-        AgentType.ANALYTICS: {
-            "name": "Analytics Agent",
-            "description": "Provides insights, KPIs, trends, and anomaly detection over CSV data",
-            "capabilities": ["KPI calculation", "Trend analysis", "Anomaly detection", "Business insights"],
-            "input_requirements": ["CSV documents"]
         }
     }
     
@@ -263,8 +256,7 @@ async def get_stats():
             "agents": {
                 "rag": "active",
                 "summarization": "active", 
-                "mcq": "active",
-                "analytics": "active"
+                "mcq": "active"
             }
         }
     except Exception as e:

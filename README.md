@@ -4,10 +4,9 @@ A production-ready financial multi-agent chatbot system that processes financial
 
 ## Features
 
-- **Financial RAG Agent**: Question-answering over financial PDFs (10-K reports, earnings calls, financial statements) using LangChain retrievers
+- **Universal Financial Agent**: Question-answering and analytics over financial PDFs and CSVs using LangChain retrievers and analytics capabilities
 - **Financial Summarization Agent**: Creates executive summaries with key financial quotes and citations using LangChain chains
 - **Financial MCQ Agent**: Generates multiple choice questions for financial knowledge assessment using LangChain tools
-- **Financial Analytics Agent**: Provides insights, KPIs, trends, and anomaly detection over financial CSV data using LangChain tools
 - **Document Processing**: Supports financial PDF and CSV uploads with intelligent chunking using LangChain document loaders
 - **Vector Storage**: ChromaDB integration with LangChain for efficient financial document retrieval
 - **LangSmith Integration**: Comprehensive tracing and monitoring of financial agent operations

@@ -10,7 +10,6 @@ class AgentType(str, Enum):
     RAG = "rag"
     SUMMARIZATION = "summarization"
     MCQ = "mcq"
-    ANALYTICS = "analytics"
 
 
 class DocumentType(str, Enum):
@@ -28,7 +27,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     """Chat request model."""
     message: str = Field(..., description="User message")
-    agent_type: Optional[AgentType] = Field(None, description="Specific agent to use")
+    agent_type: Optional[AgentType] = Field(None, description="Specific agent to use (defaults to RAG)")
     document_id: Optional[str] = Field(None, description="Document ID for context")
     conversation_history: Optional[List[ChatMessage]] = Field(
         default=[], description="Previous conversation messages"

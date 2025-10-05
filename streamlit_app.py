@@ -27,7 +27,7 @@ st.set_page_config(
     page_title="Financial Multi-Agent Chatbot",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Custom CSS for WhatsApp-like interface
@@ -40,15 +40,139 @@ st.markdown("""
         margin: 0;
     }
     
-    /* Chat container */
+    /* Remove top padding */
+    .st-emotion-cache-z5fcl4 {
+        padding-top: 1rem !important;
+    }
+    
+    /* Chat header styling */
+    .chat-header {
+        background-color: #f8f9fa;
+        padding: 15px 20px;
+        border-bottom: 1px solid #e9ecef;
+        border-radius: 10px 10px 0 0;
+        margin: 10px 10px 0 10px;
+    }
+    
+    /* Chat messages container (scrollable) */
     .chat-container {
-        background-color: #ffffff;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        height: 60vh;
         padding: 20px;
-        margin: 10px;
-        height: 70vh;
         overflow-y: auto;
+        background-color: #ffffff;
+        border-left: 1px solid #e9ecef;
+        border-right: 1px solid #e9ecef;
+        margin: 0 10px;
+        scroll-behavior: smooth;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-radius: 0;
+    }
+    
+    /* Custom scrollbar for chat container */
+    .chat-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .chat-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .chat-container::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+    
+    .chat-container::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+    
+    /* Chat input area styling */
+    .chat-input-area {
+        background-color: #f8f9fa;
+        padding: 15px 20px;
+        border-top: 1px solid #e9ecef;
+        border-radius: 0 0 10px 10px;
+        margin: 0 10px 10px 10px;
+    }
+    
+    /* Chat message styling */
+    .stChatMessage {
+        margin-bottom: 1rem;
+    }
+    
+    /* User messages on the right */
+    .stChatMessage[data-testid="user-message"] {
+        margin-left: 20%;
+        display: flex;
+        justify-content: flex-end;
+    }
+    
+    .stChatMessage[data-testid="user-message"] .stChatMessage__content {
+        background-color: #007bff !important;
+        color: white !important;
+        border-radius: 18px 18px 5px 18px !important;
+        padding: 12px 16px !important;
+        margin-left: auto !important;
+        max-width: 80% !important;
+        text-align: left !important;
+    }
+    
+    /* Assistant messages on the left */
+    .stChatMessage[data-testid="assistant-message"] {
+        margin-right: 20%;
+        display: flex;
+        justify-content: flex-start;
+    }
+    
+    .stChatMessage[data-testid="assistant-message"] .stChatMessage__content {
+        background-color: #f1f3f4 !important;
+        color: #333 !important;
+        border-radius: 18px 18px 18px 5px !important;
+        padding: 12px 16px !important;
+        margin-right: auto !important;
+        max-width: 80% !important;
+        text-align: left !important;
+    }
+    
+    /* Alternative selectors for better compatibility */
+    div[data-testid="user-message"] {
+        margin-left: 20% !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+    }
+    
+    div[data-testid="assistant-message"] {
+        margin-right: 20% !important;
+        display: flex !important;
+        justify-content: flex-start !important;
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        transition: all 0.2s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: scale(1.02);
+    }
+    
+    /* Chat input styling */
+    .stChatInput {
+        margin-top: 1rem;
+    }
+    
+    /* Quick actions styling */
+    .stButton > button {
+        border-radius: 8px;
+        font-weight: 500;
+    }
+    
+    /* Section dividers */
+    hr {
+        margin: 1.5rem 0;
+        border: none;
+        border-top: 1px solid #e0e0e0;
     }
     
     /* Message bubbles */
@@ -89,14 +213,6 @@ st.markdown("""
         margin-top: 5px;
     }
     
-    /* Input area */
-    .input-container {
-        background-color: #ffffff;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        margin: 10px;
-    }
     
     /* Sidebar styling */
     .sidebar .sidebar-content {
@@ -144,11 +260,161 @@ st.markdown("""
         font-weight: bold;
     }
     
+    /* MCQ Question Styling */
+    .mcq-question {
+        background-color: #f8f9fa;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 5px;
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+    
+    .mcq-options {
+        margin: 10px 0;
+        padding-left: 20px;
+    }
+    
+    .mcq-option {
+        margin: 8px 0;
+        padding: 8px 12px;
+        background-color: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 5px;
+        font-size: 0.95em;
+    }
+    
+    .mcq-answers {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        border-radius: 5px;
+        padding: 15px;
+        margin-top: 20px;
+        font-size: 0.9em;
+    }
+    
+    .mcq-answer-item {
+        margin: 8px 0;
+        padding: 5px 0;
+    }
+    
     /* Hide Streamlit default elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 </style>
+
+<script>
+// Auto-scroll to bottom of chat container
+function scrollToBottom() {
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+}
+
+// Plus button functionality
+function initPlusButton() {
+    const plusButton = document.querySelector('.plus-button');
+    const plusMenu = document.querySelector('.plus-menu');
+    
+    if (plusButton && plusMenu) {
+        plusButton.addEventListener('click', function(e) {
+            e.stopPropagation();
+            plusMenu.classList.toggle('show');
+            plusButton.classList.toggle('active');
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!plusButton.contains(e.target) && !plusMenu.contains(e.target)) {
+                plusMenu.classList.remove('show');
+                plusButton.classList.remove('active');
+            }
+        });
+        
+        // Handle menu item clicks
+        const menuItems = plusMenu.querySelectorAll('.plus-menu-item');
+        menuItems.forEach(function(item) {
+            item.addEventListener('click', function() {
+                const action = this.dataset.action;
+                handleMenuAction(action);
+                plusMenu.classList.remove('show');
+                plusButton.classList.remove('active');
+            });
+        });
+    }
+}
+
+// Handle menu actions
+function handleMenuAction(action) {
+    switch(action) {
+        case 'upload':
+            // Trigger file upload
+            const fileInput = document.querySelector('input[type="file"]');
+            if (fileInput) {
+                fileInput.click();
+            }
+            break;
+        case 'summarize':
+            // Auto-fill summarize request
+            const textInput = document.querySelector('.text-input');
+            if (textInput) {
+                textInput.value = 'Please summarize this document';
+                textInput.focus();
+            }
+            break;
+        case 'mcq':
+            // Auto-fill MCQ request
+            const textInput2 = document.querySelector('.text-input');
+            if (textInput2) {
+                textInput2.value = 'Generate 5 MCQ questions from this document';
+                textInput2.focus();
+            }
+            break;
+        case 'analyze':
+            // Auto-fill analysis request
+            const textInput3 = document.querySelector('.text-input');
+            if (textInput3) {
+                textInput3.value = 'Analyze the key trends and insights in this data';
+                textInput3.focus();
+            }
+            break;
+        case 'clear':
+            // Clear chat history
+            if (confirm('Are you sure you want to clear the chat history?')) {
+                // This would need to be handled by Streamlit
+                console.log('Clear chat requested');
+            }
+            break;
+    }
+}
+
+// Initialize everything when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    scrollToBottom();
+    initPlusButton();
+});
+
+// Scroll to bottom when new content is added
+const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            setTimeout(scrollToBottom, 100);
+        }
+    });
+});
+
+// Start observing when the chat container is available
+const checkForChatContainer = setInterval(function() {
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer) {
+        observer.observe(chatContainer, { childList: true, subtree: true });
+        clearInterval(checkForChatContainer);
+    }
+}, 100);
+</script>
 """, unsafe_allow_html=True)
 
 class FinancialChatbotUI:
@@ -158,8 +424,8 @@ class FinancialChatbotUI:
         self.api_base_url = "http://localhost:8000"
         self.agents = {
             "RAG": {
-                "name": "RAG Agent",
-                "description": "Question-answering over financial documents",
+                "name": "Universal Financial Agent",
+                "description": "Question-answering and analytics over PDF and CSV documents",
                 "icon": "📄",
                 "color": "#007bff"
             },
@@ -174,12 +440,6 @@ class FinancialChatbotUI:
                 "description": "Generates assessment questions",
                 "icon": "🧠",
                 "color": "#ffc107"
-            },
-            "ANALYTICS": {
-                "name": "Analytics Agent",
-                "description": "Provides insights and data analysis",
-                "icon": "📈",
-                "color": "#dc3545"
             }
         }
     
@@ -298,17 +558,44 @@ class FinancialChatbotUI:
                             # Upload all files
                             results = self.upload_multiple_files(files_content, filenames)
                             
-                            # Display results
+                            # Display results and store document IDs
                             successful_uploads = 0
                             failed_uploads = 0
+                            uploaded_pdf_ids = []
+                            uploaded_csv_ids = []
                             
                             for i, result in enumerate(results):
                                 if "error" not in result and result.get('status') == 'processed':
                                     st.success(f"✅ {result['filename']}")
                                     successful_uploads += 1
+                                    
+                                    # Store document IDs by type
+                                    if result.get('document_type') == 'pdf':
+                                        uploaded_pdf_ids.append({
+                                            'id': result['document_id'],
+                                            'filename': result['filename']
+                                        })
+                                    elif result.get('document_type') == 'csv':
+                                        uploaded_csv_ids.append({
+                                            'id': result['document_id'],
+                                            'filename': result['filename']
+                                        })
                                 else:
                                     st.error(f"❌ {filenames[i]}: {result.get('error', 'Upload failed')}")
                                     failed_uploads += 1
+                            
+                            # Store uploaded document IDs in session state
+                            if uploaded_pdf_ids:
+                                st.session_state['uploaded_pdf_documents'] = uploaded_pdf_ids
+                                # Set the first PDF as default if none selected
+                                if not st.session_state.get('pdf_document_id'):
+                                    st.session_state['pdf_document_id'] = uploaded_pdf_ids[0]['id']
+                            
+                            if uploaded_csv_ids:
+                                st.session_state['uploaded_csv_documents'] = uploaded_csv_ids
+                                # Set the first CSV as default if none selected
+                                if not st.session_state.get('csv_document_id'):
+                                    st.session_state['csv_document_id'] = uploaded_csv_ids[0]['id']
                             
                             # Summary
                             if successful_uploads > 0:
@@ -316,8 +603,28 @@ class FinancialChatbotUI:
                             if failed_uploads > 0:
                                 st.warning(f"⚠️ {failed_uploads} files failed to upload")
             
-            # Document List
-            st.markdown("### 📋 Uploaded Documents")
+            # Document Selection
+            st.markdown("### 📋 Select Document")
+            
+            # Document Selection
+            if selected_agent in ["RAG", "SUMMARIZATION", "MCQ"]:
+                pdf_docs = st.session_state.get('uploaded_pdf_documents', [])
+                if pdf_docs:
+                    pdf_options = {f"{doc['filename']}": doc['id'] for doc in pdf_docs}
+                    selected_pdf_filename = st.selectbox(
+                        "Select PDF document:",
+                        options=list(pdf_options.keys()),
+                        key="pdf_selector"
+                    )
+                    if selected_pdf_filename:
+                        st.session_state['pdf_document_id'] = pdf_options[selected_pdf_filename]
+                        st.success(f"📄 Selected: {selected_pdf_filename}")
+                else:
+                    st.warning("No PDF documents uploaded")
+            
+            
+            # Document List (for reference)
+            st.markdown("### 📋 All Uploaded Documents")
             documents = self.get_documents()
             if documents:
                 for doc in documents:
@@ -332,8 +639,73 @@ class FinancialChatbotUI:
                 st.session_state.messages = []
                 st.rerun()
             
-            return selected_agent
+    def parse_mcq_response(self, message: str) -> str:
+        """Parse MCQ response and format it with proper HTML structure."""
+        lines = message.split('\n')
+        formatted_html = ""
+        current_question = ""
+        current_options = []
+        current_answers = []
+        in_answers_section = False
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Check if this is a question (Q1:, Q2:, etc.)
+            if line.startswith(('Q1:', 'Q2:', 'Q3:', 'Q4:', 'Q5:', 'Q6:', 'Q7:', 'Q8:', 'Q9:', 'Q10:')):
+                # If we have a previous question, format it
+                if current_question:
+                    formatted_html += self.format_mcq_question(current_question, current_options, current_answers)
+                
+                # Start new question
+                current_question = line
+                current_options = []
+                current_answers = []
+                in_answers_section = False
+                
+            # Check if this is an option (A., B., C., D.)
+            elif line.startswith(('A.', 'B.', 'C.', 'D.')):
+                current_options.append(line)
+                
+            # Check if this is an answer section
+            elif line.startswith(('Correct Answer:', 'Rationale:', 'Answer:')):
+                in_answers_section = True
+                current_answers.append(line)
+                
+            # If we're in answers section, add to answers
+            elif in_answers_section:
+                current_answers.append(line)
+                
+            # Otherwise, add to current question if we have one
+            elif current_question and not line.startswith(('Q', 'A.', 'B.', 'C.', 'D.')):
+                current_question += " " + line
+        
+        # Format the last question
+        if current_question:
+            formatted_html += self.format_mcq_question(current_question, current_options, current_answers)
+        
+        return formatted_html if formatted_html else message
     
+    def format_mcq_question(self, question: str, options: List[str], answers: List[str]) -> str:
+        """Format a single MCQ question with options and answers."""
+        html = f'<div class="mcq-question">{question}</div>'
+        
+        if options:
+            html += '<div class="mcq-options">'
+            for option in options:
+                html += f'<div class="mcq-option">{option}</div>'
+            html += '</div>'
+        
+        if answers:
+            html += '<div class="mcq-answers">'
+            for answer in answers:
+                html += f'<div class="mcq-answer-item">{answer}</div>'
+            html += '</div>'
+        
+        return html
+
     def render_chat_message(self, message: str, is_user: bool, agent_type: str = None, timestamp: str = None, sources: List = None):
         """Render a single chat message with enhanced styling."""
         if is_user:
@@ -353,98 +725,226 @@ class FinancialChatbotUI:
             if sources and len(sources) > 0:
                 sources_info = f'<div style="font-size: 0.8em; color: #666; margin-top: 5px;">📎 Sources: {len(sources)}</div>'
             
+            # Check if this is an MCQ response and format it accordingly
+            formatted_message = message
+            if agent_type == "MCQ":
+                formatted_message = self.parse_mcq_response(message)
+            
             st.markdown(f"""
             <div class="bot-message">
                 {agent_info}
-                {message}
+                {formatted_message}
                 {sources_info}
                 <div class="message-time">{timestamp}</div>
             </div>
             """, unsafe_allow_html=True)
     
+    def upload_files(self, uploaded_files):
+        """Upload files to the API."""
+        try:
+            # Prepare files for multipart/form-data upload
+            files = []
+            for uploaded_file in uploaded_files:
+                # Reset file pointer to beginning
+                uploaded_file.seek(0)
+                # Read file content once
+                file_content = uploaded_file.read()
+                files.append(('files', (uploaded_file.name, file_content, uploaded_file.type)))
+            
+            response = requests.post(
+                f"{self.api_base_url}/upload/multiple",
+                files=files,
+                timeout=120  # Increased timeout for large files
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {"error": f"Upload failed with status {response.status_code}: {response.text}"}
+        except requests.exceptions.Timeout:
+            return {"error": "Upload timeout - file may be too large"}
+        except requests.exceptions.ConnectionError:
+            return {"error": "Connection failed - please check if API server is running"}
+        except requests.exceptions.RequestException as e:
+            return {"error": f"Upload request failed: {str(e)}"}
+        except Exception as e:
+            return {"error": f"Unexpected error: {str(e)}"}
+    
+    def handle_file_upload(self, uploaded_files):
+        """Handle file upload and process them."""
+        if not uploaded_files:
+            return
+        
+        if len(uploaded_files) > 10:
+            st.error("❌ Maximum 10 files allowed per upload")
+            return
+        
+        # Check if API is running
+        if not self.check_api_health():
+            st.error("❌ API server is not running. Please start the server with: `python main.py`")
+            return
+        
+        # Show loading message
+        loading_placeholder = st.empty()
+        loading_placeholder.info(f"🔄 Uploading {len(uploaded_files)} files...")
+        
+        try:
+            # Upload files via API
+            upload_response = self.upload_files(uploaded_files)
+            
+            if upload_response and isinstance(upload_response, list) and len(upload_response) > 0:
+                # Check if any files were successfully processed
+                successful_uploads = [r for r in upload_response if r.get("status") == "processed"]
+                
+                if successful_uploads:
+                    # Clear loading message
+                    loading_placeholder.empty()
+                    st.success(f"✅ Successfully uploaded {len(successful_uploads)} files!")
+                    
+                    # Update session state
+                    for response_item in successful_uploads:
+                        document_id = response_item.get("document_id")
+                        filename = response_item.get("filename")
+                        document_type = response_item.get("document_type")
+                        
+                        if document_type == "pdf":
+                            st.session_state.uploaded_pdf_documents.append({
+                                "id": document_id,
+                                "filename": filename,
+                                "upload_time": datetime.now().strftime("%Y-%m-%d %H:%M")
+                            })
+                        elif document_type == "csv":
+                            st.session_state.uploaded_csv_documents.append({
+                                "id": document_id,
+                                "filename": filename,
+                                "upload_time": datetime.now().strftime("%Y-%m-%d %H:%M")
+                            })
+                    
+                    st.rerun()
+                else:
+                    loading_placeholder.empty()
+                    st.error("❌ No files were successfully processed")
+            elif upload_response and "error" in upload_response:
+                loading_placeholder.empty()
+                st.error(f"❌ Upload failed: {upload_response['error']}")
+            else:
+                loading_placeholder.empty()
+                st.error("❌ Upload failed: No response received")
+                
+        except Exception as e:
+            loading_placeholder.empty()
+            st.error(f"❌ Upload failed: {str(e)}")
+    
     def render_chat_interface(self, selected_agent: str):
-        """Render the main chat interface."""
+        """Render the chat interface using Streamlit's native components."""
         # Initialize session state
         if "messages" not in st.session_state:
             st.session_state.messages = []
         
-        # Chat container
-        st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+        # Document selection is now handled in Row 2 above
         
-        # Display chat messages
-        for message in st.session_state.messages:
-            self.render_chat_message(
-                message["content"],
-                message["is_user"],
-                message.get("agent_type"),
-                message.get("timestamp"),
-                message.get("sources")
-            )
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Input area
-        st.markdown('<div class="input-container">', unsafe_allow_html=True)
-        
-        # Message input
-        user_input = st.text_input(
-            f"💬 Ask {self.agents[selected_agent]['name']}...",
-            key="user_input",
-            placeholder=f"Type your message for {self.agents[selected_agent]['name']}..."
-        )
-        
-        # Send button
-        col1, col2, col3 = st.columns([1, 1, 8])
+        # Chat header with Clear Chat button on extreme right
+        col1, col2, col3 = st.columns([4, 1, 1])
         
         with col1:
-            if st.button("📤 Send", type="primary"):
-                if user_input.strip():
-                    # Add user message to chat
-                    timestamp = datetime.now().strftime("%H:%M")
-                    st.session_state.messages.append({
-                        "content": user_input,
-                        "is_user": True,
-                        "timestamp": timestamp
-                    })
-                    
-                    # Get document ID based on agent type
-                    document_id = None
-                    if selected_agent in ["RAG", "SUMMARIZATION", "MCQ"]:
-                        document_id = st.session_state.get("pdf_document_id")
-                    elif selected_agent == "ANALYTICS":
-                        document_id = st.session_state.get("csv_document_id")
-                    
-                    # Send to API and get response
-                    with st.spinner(f"🤖 {self.agents[selected_agent]['name']} is thinking..."):
-                        response = self.send_message(user_input, selected_agent, document_id)
-                    
-                    # Add bot response to chat
-                    if "error" not in response:
-                        bot_message = response.get("response", "No response received")
-                        sources = response.get("sources", [])
-                        st.session_state.messages.append({
-                            "content": bot_message,
-                            "is_user": False,
-                            "agent_type": selected_agent,
-                            "timestamp": datetime.now().strftime("%H:%M"),
-                            "sources": sources
-                        })
-                    else:
-                        st.session_state.messages.append({
-                            "content": f"❌ Error: {response['error']}",
-                            "is_user": False,
-                            "agent_type": selected_agent,
-                            "timestamp": datetime.now().strftime("%H:%M"),
-                            "sources": []
-                        })
-                    
-                    st.rerun()
+            st.markdown("### Chat")
         
         with col2:
-            if st.button("🔄 Refresh"):
+            st.write("")  # Empty space
+        
+        with col3:
+            # Clear chat button positioned at extreme right
+            if st.button("🗑️ Clear Chat", help="Clear all chat messages"):
+                st.session_state.messages = []
                 st.rerun()
         
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Create a container for messages with fixed height
+        messages_container = st.container()
+        
+        with messages_container:
+            # Display chat messages using Streamlit's native components
+            for message in st.session_state.messages:
+                if message["is_user"]:
+                    with st.chat_message("user"):
+                        st.write(message["content"])
+                        st.caption(f"Sent at {message.get('timestamp', '')}")
+                else:
+                    with st.chat_message("assistant"):
+                        # Show agent info
+                        if message.get("agent_type") and message["agent_type"] in self.agents:
+                            st.markdown(f"**{self.agents[message['agent_type']]['icon']} {self.agents[message['agent_type']]['name']}**")
+                        
+                        # Show message content
+                        if message.get("agent_type") == "MCQ":
+                            # Format MCQ responses
+                            formatted_content = self.parse_mcq_response(message["content"])
+                            st.markdown(formatted_content, unsafe_allow_html=True)
+                        else:
+                            st.write(message["content"])
+                        
+                        # Show sources if available
+                        if message.get("sources") and len(message["sources"]) > 0:
+                            with st.expander(f"📎 Sources ({len(message['sources'])})"):
+                                for i, source in enumerate(message["sources"]):
+                                    st.write(f"**Source {i+1}:**")
+                                    st.write(source.get("content", "")[:200] + "...")
+                                    if source.get("metadata"):
+                                        st.write(f"*From: {source['metadata'].get('filename', 'Unknown')}*")
+                        
+                        st.caption(f"Responded at {message.get('timestamp', '')}")
+        
+        
+        # Message input
+        st.markdown("---")
+        st.markdown("### 💬 Send Message")
+        user_input = st.chat_input(
+            f"Ask {self.agents[selected_agent]['name']}...",
+            key="chat_input"
+        )
+        
+        # Process message
+        if user_input:
+            # Add user message to chat
+            timestamp = datetime.now().strftime("%H:%M")
+            st.session_state.messages.append({
+                "content": user_input,
+                "is_user": True,
+                "timestamp": timestamp
+            })
+            
+            # Get document ID based on agent type
+            document_id = None
+            if selected_agent in ["RAG", "SUMMARIZATION", "MCQ"]:
+                document_id = st.session_state.get("pdf_document_id")
+                if not document_id:
+                    st.error("❌ Please upload and select a PDF document first!")
+                    st.stop()
+            
+            # Send to API and get response
+            with st.spinner(f"🤖 {self.agents[selected_agent]['name']} is thinking..."):
+                response = self.send_message(user_input, selected_agent, document_id)
+            
+            # Add bot response to chat
+            if "error" not in response:
+                bot_message = response.get("response", "No response received")
+                sources = response.get("sources", [])
+                st.session_state.messages.append({
+                    "content": bot_message,
+                    "is_user": False,
+                    "agent_type": selected_agent,
+                    "timestamp": datetime.now().strftime("%H:%M"),
+                    "sources": sources
+                })
+            else:
+                st.session_state.messages.append({
+                    "content": f"❌ Error: {response['error']}",
+                    "is_user": False,
+                    "agent_type": selected_agent,
+                    "timestamp": datetime.now().strftime("%H:%M"),
+                    "sources": []
+                })
+            
+            st.rerun()
     
     def render_welcome_screen(self):
         """Render welcome screen when no agent is selected."""
@@ -481,6 +981,20 @@ class FinancialChatbotUI:
     
     def run(self):
         """Main application runner."""
+        # Initialize session state
+        if 'messages' not in st.session_state:
+            st.session_state.messages = []
+        if 'uploaded_pdf_documents' not in st.session_state:
+            st.session_state.uploaded_pdf_documents = []
+        if 'uploaded_csv_documents' not in st.session_state:
+            st.session_state.uploaded_csv_documents = []
+        if 'pdf_document_id' not in st.session_state:
+            st.session_state.pdf_document_id = None
+        if 'csv_document_id' not in st.session_state:
+            st.session_state.csv_document_id = None
+        if 'selected_agent' not in st.session_state:
+            st.session_state.selected_agent = "RAG"
+        
         # Header
         st.markdown("""
         <div style="text-align: center; padding: 20px; background: linear-gradient(90deg, #007bff, #28a745); color: white; border-radius: 10px; margin-bottom: 20px;">
@@ -489,14 +1003,72 @@ class FinancialChatbotUI:
         </div>
         """, unsafe_allow_html=True)
         
-        # Render sidebar and get selected agent
-        selected_agent = self.render_sidebar()
+        # Row 1: Browse Documents and Selected Files
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            # File upload
+            uploaded_files = st.file_uploader(
+                "Browse Documents",
+                type=['pdf', 'csv'],
+                accept_multiple_files=True,
+                help="Select PDF or CSV files to upload"
+            )
+        
+        with col2:
+            # Show selected files
+            if uploaded_files:
+                st.write(f"📁 Selected {len(uploaded_files)} file(s):")
+                for file in uploaded_files:
+                    st.write(f"• {file.name}")
+                
+                # Upload button
+                if st.button("📤 Upload Files", type="primary"):
+                    self.handle_file_upload(uploaded_files)
+            else:
+                st.write("📁 No files selected")
+        
+        # Row 2: PDF Document Selection and Agent Selection
+        col3, col4 = st.columns([1, 1])
+        
+        with col3:
+            # PDF Document Selection
+            pdf_docs = st.session_state.get('uploaded_pdf_documents', [])
+            if pdf_docs:
+                pdf_options = {f"{doc['filename']}": doc['id'] for doc in pdf_docs}
+                selected_pdf_filename = st.selectbox(
+                    "Select PDF document:",
+                    options=[""] + list(pdf_options.keys()),
+                    key="pdf_selector_main"
+                )
+                
+                if selected_pdf_filename:
+                    st.session_state.pdf_document_id = pdf_options[selected_pdf_filename]
+                    st.success(f"📄 Selected: {selected_pdf_filename}")
+                else:
+                    st.session_state.pdf_document_id = None
+                    st.warning("📄 Please select a PDF document")
+            else:
+                st.warning("📄 No PDF documents uploaded yet")
+        
+        with col4:
+            # Agent selection dropdown
+            agent_options = {
+                "RAG": "🤖 Universal Financial Agent (Q&A + Analytics)",
+                "SUMMARIZATION": "📝 Summarization Agent",
+                "MCQ": "❓ MCQ Generation Agent"
+            }
+            
+            selected_agent = st.selectbox(
+                "Select Agent:",
+                options=list(agent_options.keys()),
+                format_func=lambda x: agent_options[x],
+                key="agent_selector"
+            )
+            st.session_state.selected_agent = selected_agent
         
         # Main content area
-        if selected_agent:
-            self.render_chat_interface(selected_agent)
-        else:
-            self.render_welcome_screen()
+        self.render_chat_interface(selected_agent)
 
 def main():
     """Main function to run the Streamlit app."""

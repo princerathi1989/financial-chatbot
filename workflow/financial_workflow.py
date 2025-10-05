@@ -34,7 +34,6 @@ class FinancialWorkflow:
         workflow.add_node("rag_agent", self._rag_agent_node)
         workflow.add_node("summarization_agent", self._summarization_agent_node)
         workflow.add_node("mcq_agent", self._mcq_agent_node)
-        workflow.add_node("analytics_agent", self._analytics_agent_node)
         workflow.add_node("error_handler", self._error_handler_node)
         
         # Set entry point
@@ -48,7 +47,6 @@ class FinancialWorkflow:
                 "rag": "rag_agent",
                 "summarization": "summarization_agent", 
                 "mcq": "mcq_agent",
-                "analytics": "analytics_agent",
                 "error": "error_handler"
             }
         )
@@ -57,7 +55,6 @@ class FinancialWorkflow:
         workflow.add_edge("rag_agent", END)
         workflow.add_edge("summarization_agent", END)
         workflow.add_edge("mcq_agent", END)
-        workflow.add_edge("analytics_agent", END)
         workflow.add_edge("error_handler", END)
         
         return workflow.compile()
@@ -73,10 +70,9 @@ class FinancialWorkflow:
                 agent_type = "summarization"
             elif any(keyword in message for keyword in ["quiz", "test", "questions", "mcq", "multiple choice"]):
                 agent_type = "mcq"
-            elif any(keyword in message for keyword in ["kpi", "trends", "analytics", "insights", "anomalies"]):
-                agent_type = "analytics"
             else:
-                agent_type = "rag"  # Default to RAG
+                # Default to RAG for all other queries (including analytics queries)
+                agent_type = "rag"
             
             # Override with explicit agent type if provided
             if state.get("agent_type"):
@@ -101,10 +97,13 @@ class FinancialWorkflow:
     
     @traceable(name="financial_rag_agent")
     def _rag_agent_node(self, state: FinancialState) -> FinancialState:
-        """RAG agent node for question answering."""
+        """Enhanced RAG agent node for question answering and analytics."""
         try:
             query = state["message"]
             document_id = state.get("document_id")
+            
+            # Check if this is an analytics query
+            is_analytics_query = self._is_analytics_query(query)
             
             # Retrieve relevant context
             context_chunks = vector_store.search_similar_chunks(
@@ -119,35 +118,29 @@ class FinancialWorkflow:
                 state["metadata"] = {"context_chunks_found": 0}
                 return state
             
-            # Generate answer using LangChain
+            # Generate answer using LangChain with analytics awareness
             context_text = "\n\n".join([
                 f"Source {i+1} (Document: {chunk.get('metadata', {}).get('filename', 'Unknown')}):\n{chunk['content']}" 
                 for i, chunk in enumerate(context_chunks)
             ])
             
-            prompt = ChatPromptTemplate.from_template("""
-You are a senior financial analyst and expert assistant specializing in financial document analysis and Q&A.
-
-Context from financial documents:
-{context}
-
-Question: {question}
-
-Instructions:
-- Provide a comprehensive and accurate answer based on the financial context provided
-- If the context doesn't contain enough information, clearly state this limitation
-- Cite specific information from the sources when possible
-- Be precise and professional in your response
-- Focus on financial insights, metrics, and analysis
-- Use proper financial terminology and maintain professional tone
-
-Answer:
-""")
+            # Determine document types in context
+            document_types = set()
+            for chunk in context_chunks:
+                doc_type = chunk.get('metadata', {}).get('file_type', 'unknown')
+                document_types.add(doc_type)
+            
+            # Create analytics-aware prompt
+            if is_analytics_query and 'csv' in document_types:
+                prompt = self._create_analytics_prompt()
+            else:
+                prompt = self._create_standard_prompt()
             
             chain = prompt | self.llm
             response = chain.invoke({
                 "context": context_text,
-                "question": query
+                "question": query,
+                "document_types": ", ".join(document_types)
             })
             
             # Prepare sources
@@ -165,7 +158,9 @@ Answer:
             state["metadata"] = {
                 "context_chunks_found": len(context_chunks),
                 "document_id": document_id,
-                "agent_type": "rag"
+                "agent_type": "rag",
+                "is_analytics_query": is_analytics_query,
+                "document_types": list(document_types)
             }
             
             return state
@@ -175,6 +170,65 @@ Answer:
             state["error"] = str(e)
             state["response"] = "I encountered an error while processing your financial question. Please try again."
             return state
+    
+    def _is_analytics_query(self, query: str) -> bool:
+        """Determine if the query requires analytics processing."""
+        analytics_keywords = [
+            "kpi", "trends", "analytics", "insights", "anomalies", "analysis",
+            "calculate", "computation", "statistics", "metrics", "performance",
+            "revenue", "profit", "margin", "growth", "decline", "correlation",
+            "pattern", "forecast", "prediction", "comparison", "ratio"
+        ]
+        query_lower = query.lower()
+        return any(keyword in query_lower for keyword in analytics_keywords)
+    
+    def _create_analytics_prompt(self) -> ChatPromptTemplate:
+        """Create prompt for analytics queries."""
+        return ChatPromptTemplate.from_template("""
+You are a senior financial analyst and expert assistant specializing in financial document analysis, Q&A, and data analytics.
+
+Context from financial documents (including CSV data):
+{context}
+
+Question: {question}
+
+Instructions for Analytics Queries:
+- Analyze the financial data and provide comprehensive insights
+- Calculate relevant KPIs, ratios, and metrics when possible
+- Identify trends, patterns, and anomalies in the data
+- Provide quantitative analysis with specific numbers and percentages
+- Compare different time periods or categories when relevant
+- Highlight key business insights and recommendations
+- Use proper financial terminology and maintain professional tone
+- If CSV data is present, perform statistical analysis and calculations
+- Cite specific data points and sources in your analysis
+
+Document Types Available: {document_types}
+
+Answer with detailed analytics:
+""")
+    
+    def _create_standard_prompt(self) -> ChatPromptTemplate:
+        """Create prompt for standard Q&A queries."""
+        return ChatPromptTemplate.from_template("""
+You are a senior financial analyst and expert assistant specializing in financial document analysis and Q&A.
+
+Context from financial documents:
+{context}
+
+Question: {question}
+
+Instructions:
+- Provide a comprehensive and accurate answer based on the financial context provided
+- If the context doesn't contain enough information, clearly state this limitation
+- Cite specific information from the sources when possible
+- Be precise and professional in your response
+- Focus on financial insights, metrics, and analysis
+- Use proper financial terminology and maintain professional tone
+- Handle both PDF and CSV data appropriately
+
+Answer:
+""")
     
     @traceable(name="financial_summarization_agent")
     def _summarization_agent_node(self, state: FinancialState) -> FinancialState:
@@ -312,48 +366,6 @@ Rationale: [Explanation]
             state["response"] = "I encountered an error while generating MCQ questions. Please try again."
             return state
     
-    @traceable(name="financial_analytics_agent")
-    def _analytics_agent_node(self, state: FinancialState) -> FinancialState:
-        """Analytics agent node for CSV data analysis."""
-        try:
-            document_id = state.get("document_id")
-            
-            if not document_id:
-                state["response"] = "Please upload a CSV document first to perform analytics."
-                state["sources"] = []
-                state["metadata"] = {}
-                return state
-            
-            # For now, return a placeholder response
-            # In a full implementation, this would analyze CSV data
-            state["response"] = """Analytics Report:
-
-Key Insights:
-• Revenue trend analysis shows [placeholder]
-• Profit margin optimization opportunities identified
-• Market performance indicators within normal ranges
-
-KPIs: 5 calculated
-Trends: 3 detected  
-Anomalies: 1 found
-
-Note: Full analytics implementation requires CSV data processing."""
-            
-            state["sources"] = [{"type": "analytics", "document_id": document_id}]
-            state["metadata"] = {
-                "agent_type": "analytics",
-                "kpis": 5,
-                "trends": 3,
-                "anomalies": 1
-            }
-            
-            return state
-            
-        except Exception as e:
-            self.logger.error(f"Error in analytics agent: {e}")
-            state["error"] = str(e)
-            state["response"] = "I encountered an error while performing analytics. Please try again."
-            return state
     
     def _error_handler_node(self, state: FinancialState) -> FinancialState:
         """Error handler node."""

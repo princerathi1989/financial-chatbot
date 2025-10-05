@@ -121,21 +121,25 @@ Send a message to the multi-agent system.
 Get information about a specific agent.
 
 **Parameters:**
-- `agent_type`: One of `rag`, `summarization`, `mcq`, `analytics`
+- `agent_type`: One of `rag`, `summarization`, `mcq`
 
 **Response:**
 ```json
 {
-  "name": "RAG Agent",
-  "description": "Question-answering over PDF documents using retrieval-augmented generation",
+  "name": "Universal Financial Agent",
+  "description": "Question-answering and analytics over PDF and CSV documents using retrieval-augmented generation",
   "capabilities": [
     "Document Q&A",
+    "Analytics & KPIs",
+    "Trend analysis",
     "Context retrieval",
-    "Citation tracking"
+    "Citation tracking",
+    "Data insights"
   ],
   "input_requirements": [
-    "PDF documents",
-    "Natural language questions"
+    "PDF and CSV documents",
+    "Natural language questions",
+    "Analytics queries"
   ]
 }
 ```
@@ -207,27 +211,38 @@ Get system statistics and status.
   "agents": {
     "rag": "active",
     "summarization": "active",
-    "mcq": "active",
-    "analytics": "active"
+    "mcq": "active"
   }
 }
 ```
 
 ## Agent Types
 
-### RAG Agent (`rag`)
+### Universal Financial Agent (`rag`)
 
-**Purpose:** Question-answering over PDF documents using retrieval-augmented generation.
+**Purpose:** Question-answering and analytics over PDF and CSV documents using retrieval-augmented generation.
 
 **Capabilities:**
-- Answer questions about uploaded PDF documents
+- Answer questions about uploaded PDF and CSV documents
+- Perform analytics, KPI calculations, and trend analysis
 - Provide citations and source references
 - Context-aware responses based on document content
+- Handle mixed queries across document types
+- Generate insights from financial data
 
 **Usage:**
 ```json
 {
-  "message": "What are the key findings in this report?",
+  "message": "What are the revenue trends in this CSV data?",
+  "agent_type": "rag",
+  "document_id": "doc_123456"
+}
+```
+
+**Analytics Queries:**
+```json
+{
+  "message": "Calculate the profit margins and identify any anomalies",
   "agent_type": "rag",
   "document_id": "doc_123456"
 }
@@ -269,24 +284,6 @@ Get system statistics and status.
 }
 ```
 
-### Analytics Agent (`analytics`)
-
-**Purpose:** Provide insights, KPIs, trends, and anomaly detection over CSV data.
-
-**Capabilities:**
-- Calculate key performance indicators
-- Detect trends and patterns
-- Identify anomalies in data
-- Generate business insights
-
-**Usage:**
-```json
-{
-  "message": "Analyze the trends in this data",
-  "agent_type": "analytics",
-  "document_id": "doc_789012"
-}
-```
 
 ## Error Handling
 
