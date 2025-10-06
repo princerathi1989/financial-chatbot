@@ -16,24 +16,19 @@ from app.models.schemas import (
 )
 from app.api.langgraph_chatbot import chatbot
 
-# Ensure directories exist
 ensure_directories()
 
-# Setup LangSmith tracing
 setup_langsmith()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     logger.info("Starting Financial Multi-Agent Chatbot API")
     logger.info(f"Debug mode: {settings.debug}")
     logger.info(f"OpenAI model: {settings.openai_model}")
     yield
-    # Shutdown
     logger.info("Shutting down Financial Multi-Agent Chatbot API")
 
 
-# Create FastAPI app with lifespan
 app = FastAPI(
     title="Financial Multi-Agent Chatbot",
     description="A production-style POC for ingesting financial PDFs and CSVs with multi-agent capabilities",
@@ -43,17 +38,14 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
-# Log to stdout instead of a file to avoid creating a logs/ directory
 logger.remove()
 logger.add(sys.stdout, level=settings.log_level)
 

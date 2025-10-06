@@ -13,7 +13,7 @@ This guide explains the entire project as if you’ll be examined on it: what ea
 
 ## 2) High‑level architecture
 
-- **Frontend**: `frontend/streamlit_app/app.py` – UI for document upload and chatting.
+- **Frontend**: `frontend/app.py` – UI for document upload and chatting.
 - **Backend API**: `backend/uvicorn_app.py` – FastAPI app exposing endpoints:
   - Upload documents, chat, list/get/delete documents, stats, health.
 - **Agents & Workflow**: `backend/app/workflow/` – LangGraph workflow (`FinancialWorkflow`) routes requests to specific agents:
@@ -125,7 +125,7 @@ This guide explains the entire project as if you’ll be examined on it: what ea
 - `backend/app/models/schemas.py`
   - API models: `ChatRequest`, `ChatResponse`, `DocumentUploadResponse`, plus enums like `AgentType`, `DocumentType`.
 
-- `frontend/streamlit_app/app.py`
+- `frontend/app.py`
   - Simple UI for uploads and chatting against the FastAPI backend (refer to the code to see the exact endpoints it calls).
 
 ---
@@ -205,7 +205,7 @@ This guide explains the entire project as if you’ll be examined on it: what ea
    - From repo root: `python -m uvicorn backend.uvicorn_app:app --reload --host 0.0.0.0 --port 8000`
 4) Open docs: `http://localhost:8000/docs`.
 5) Optionally run Streamlit UI:
-   - From repo root: `streamlit run frontend/streamlit_app/app.py`
+   - From repo root: `streamlit run frontend/app.py`
 
 ---
 

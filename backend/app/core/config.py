@@ -1,6 +1,7 @@
 """Core configuration and settings for the financial multi-agent chatbot."""
 
 from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import Optional
 import os
 from pathlib import Path
@@ -10,59 +11,59 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
     # OpenAI Configuration
-    openai_api_key: str
-    openai_model: str = "gpt-4-turbo-preview"
-    openai_embedding_model: str = "text-embedding-3-small"
+    openai_api_key: str = Field(..., description="OpenAI API key for LLM and embeddings")
+    openai_model: str = Field("gpt-4-turbo-preview", description="OpenAI model for chat completions")
+    openai_embedding_model: str = Field("text-embedding-3-small", description="OpenAI model for embeddings")
     
     # LangSmith Configuration (Optional)
-    langsmith_api_key: Optional[str] = None
-    langsmith_project: str = "financial-chatbot"
-    langsmith_endpoint: str = "https://api.smith.langchain.com"
-    langchain_tracing_v2: Optional[str] = None
+    langsmith_api_key: Optional[str] = Field(None, description="LangSmith API key for tracing")
+    langsmith_project: str = Field("financial-chatbot", description="LangSmith project name")
+    langsmith_endpoint: str = Field("https://api.smith.langchain.com", description="LangSmith API endpoint")
+    langchain_tracing_v2: Optional[str] = Field(None, description="Enable LangChain tracing v2")
     
-    # Storage directories (resolved relative to backend/app/storage)
-    # Compute base as backend/app/storage regardless of CWD
     _storage_base_dir: Path = Path(__file__).resolve().parents[1] / "storage"
-    chroma_persist_directory: str = str((_storage_base_dir / "chroma_db").resolve())
-    upload_directory: str = str((_storage_base_dir / "uploads").resolve())
-    temp_directory: str = str((_storage_base_dir / "temp").resolve())
+    chroma_persist_directory: str = Field(
+        default_factory=lambda: str((Path(__file__).resolve().parents[1] / "storage" / "chroma_db").resolve()),
+        description="Chroma vector store persistence directory"
+    )
+    upload_directory: str = Field(
+        default_factory=lambda: str((Path(__file__).resolve().parents[1] / "storage" / "uploads").resolve()),
+        description="Directory for uploaded files"
+    )
+    temp_directory: str = Field(
+        default_factory=lambda: str((Path(__file__).resolve().parents[1] / "storage" / "temp").resolve()),
+        description="Directory for temporary files"
+    )
     
     # Production Cloud Configuration
-    environment: str = "development"  # development, staging, production
+    environment: str = Field("development", description="Environment: development, staging, production")
     
-    # Vector Store Configuration (Pinecone only)
-    vector_store_type: str = "pinecone"  # pinecone only
-    pinecone_api_key: Optional[str] = None
-    pinecone_environment: str = "us-east-1"
-    pinecone_index_name: str = "financial-documents"
-    pinecone_metric: str = "cosine"
+    vector_store_type: str = Field("pinecone", description="Vector store type: pinecone only")
+    pinecone_api_key: Optional[str] = Field(None, description="Pinecone API key")
+    pinecone_environment: str = Field("us-east-1", description="Pinecone environment/region")
+    pinecone_index_name: str = Field("financial-documents", description="Pinecone index name")
+    pinecone_metric: str = Field("cosine", description="Pinecone similarity metric")
     
-    # Database Configuration (for document metadata - in-memory only)
-    database_type: str = "memory"  # memory only for session-based processing
+    database_type: str = Field("memory", description="Database type: memory only for session-based processing")
     
     # Application Settings
-    debug: bool = False
-    log_level: str = "INFO"
-    max_file_size_mb: int = 50
-    max_chunk_size: int = 1000
-    chunk_overlap: int = 200
+    debug: bool = Field(False, description="Enable debug mode")
+    log_level: str = Field("INFO", description="Logging level: DEBUG, INFO, WARNING, ERROR")
+    max_file_size_mb: int = Field(50, description="Maximum file size in MB")
+    max_chunk_size: int = Field(1000, description="Maximum chunk size for text splitting")
+    chunk_overlap: int = Field(200, description="Chunk overlap for text splitting")
     
     # Production Settings
-    api_host: str = "0.0.0.0"
-    api_port: int = 8000
-    workers: int = 1
-    reload: bool = False
+    api_host: str = Field("0.0.0.0", description="API server host")
+    api_port: int = Field(8000, description="API server port")
+    workers: int = Field(1, description="Number of worker processes")
+    reload: bool = Field(False, description="Enable auto-reload for development")
     
     # Agent Settings
-    rag_top_k_results: int = 5
-    summary_max_length: int = 500
-    mcq_num_questions: int = 5
-    analytics_confidence_threshold: float = 0.8
-    
-    # Document Processing Settings
-    max_chunk_size: int = 1000
-    chunk_overlap: int = 200
-    max_file_size_mb: int = 50
+    rag_top_k_results: int = Field(5, description="Number of top results for RAG retrieval")
+    summary_max_length: int = Field(500, description="Maximum length for summaries")
+    mcq_num_questions: int = Field(5, description="Number of MCQ questions to generate")
+    analytics_confidence_threshold: float = Field(0.8, description="Confidence threshold for analytics")
     
     class Config:
         env_file = ".env"
@@ -76,10 +77,8 @@ settings = Settings()
 
 def ensure_directories():
     """Ensure required directories exist."""
-    # Always ensure upload and temp directories
     os.makedirs(settings.upload_directory, exist_ok=True)
     os.makedirs(settings.temp_directory, exist_ok=True)
-    # Only create Chroma directory when Chroma is the selected vector store
     if settings.vector_store_type.lower() == "chroma":
         os.makedirs(settings.chroma_persist_directory, exist_ok=True)
 
@@ -87,7 +86,6 @@ def ensure_directories():
 def setup_langsmith():
     """Setup LangSmith tracing if API key is provided."""
     if settings.langsmith_api_key:
-        # Set environment variables for LangChain tracing
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         os.environ["LANGCHAIN_API_KEY"] = settings.langsmith_api_key
         os.environ["LANGCHAIN_PROJECT"] = settings.langsmith_project

@@ -12,10 +12,7 @@ class ServiceProvider(Enum):
     # Vector Stores
     PINECONE = "pinecone"
     
-    # Storage (in-memory only for session-based processing)
     MEMORY = "memory"
-    
-    # Databases (in-memory only for session-based processing)
     MEMORY_DB = "memory"
 
 
@@ -58,13 +55,8 @@ class ServiceConfiguration:
         """Apply a predefined configuration to settings."""
         config = cls.get_configuration(config_name)
         
-        # Update vector store
         settings.vector_store_type = config["vector_store"].value
-        
-        # Update storage (always memory for session-based processing)
         settings.storage_type = config["storage"].value
-        
-        # Update database (always memory for session-based processing)
         settings.database_type = config["database"].value
         
         logger.info(f"Applied '{config_name}' configuration: {config['description']}")
@@ -89,19 +81,15 @@ class ServiceConfiguration:
             "services": {}
         }
         
-        # Validate vector store
         vector_store_status = cls._validate_vector_store()
         validation_result["services"]["vector_store"] = vector_store_status
         
-        # Validate storage (always memory)
         storage_status = {"valid": True, "errors": [], "warnings": []}
         validation_result["services"]["storage"] = storage_status
         
-        # Validate database (always memory)
         database_status = {"valid": True, "errors": [], "warnings": []}
         validation_result["services"]["database"] = database_status
         
-        # Check for errors
         for service, status in validation_result["services"].items():
             if not status["valid"]:
                 validation_result["valid"] = False

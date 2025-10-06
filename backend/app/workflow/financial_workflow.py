@@ -113,11 +113,19 @@ class FinancialWorkflow:
             query_complexity = self._get_query_complexity(query)
             
             # Retrieve relevant context (search across all documents if no specific document_id)
-            context_chunks = vector_store.search_similar_chunks(
-                query=query,
-                top_k=settings.rag_top_k_results,
-                document_id=None  # Search across all documents for multi-document search
-            )
+            # Use enhanced CSV search if analytics query
+            if is_analytics_query:
+                context_chunks = vector_store.search_csv_specific(
+                    query=query,
+                    top_k=settings.rag_top_k_results,
+                    document_id=None  # Search across all documents for multi-document search
+                )
+            else:
+                context_chunks = vector_store.search_similar_chunks(
+                    query=query,
+                    top_k=settings.rag_top_k_results,
+                    document_id=None  # Search across all documents for multi-document search
+                )
             
             if not context_chunks:
                 state["response"] = "I couldn't find relevant financial information in the uploaded documents to answer your question."
@@ -137,7 +145,6 @@ class FinancialWorkflow:
                 doc_type = chunk.get('metadata', {}).get('file_type', 'unknown')
                 document_types.add(doc_type)
             
-            # Create analytics-aware prompt with complexity information
             if is_analytics_query and 'csv' in document_types:
                 prompt = self._create_analytics_prompt()
             else:
@@ -214,7 +221,7 @@ class FinancialWorkflow:
         return "moderate"
     
     def _create_analytics_prompt(self) -> ChatPromptTemplate:
-        """Create prompt for analytics queries with dynamic length control."""
+        """Create prompt for analytics queries with enhanced CSV handling."""
         return ChatPromptTemplate.from_template("""
 You are a senior financial analyst and expert assistant specializing in financial document analysis, Q&A, and data analytics.
 
@@ -233,9 +240,14 @@ Instructions for Analytics Queries:
 - Compare different time periods or categories when relevant
 - Highlight key business insights and recommendations
 - Use proper financial terminology and maintain professional tone
-- If CSV data is present, perform statistical analysis and calculations
-- Cite specific data points and sources in your analysis
-- BE CONCISE: Focus on essential information only
+
+CSV Data Analysis Guidelines:
+- When CSV data is present, leverage the structured chunks for precise analysis
+- Use correlation matrices, statistical summaries, and category analyses
+- Reference specific data points from row-based chunks when needed
+- Perform calculations using the provided statistical summaries
+- Identify patterns in categorical data and time-series trends
+- Cite specific values, percentages, and ranges from the data
 
 Response Length Guidelines (Query Complexity: {complexity}):
 - ALWAYS keep responses to 1-2 paragraphs maximum
@@ -435,7 +447,6 @@ Rationale: [Explanation]
             # Execute workflow
             final_state = self.graph.invoke(initial_state)
             
-            # Create response
             response = FinancialResponse(
                 response=final_state["response"],
                 agent_type=final_state["metadata"].get("agent_type", "rag"),

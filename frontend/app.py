@@ -24,7 +24,7 @@ import io
 
 # Configure Streamlit page
 st.set_page_config(
-    page_title="Financial Multi-Agent Chatbot",
+    page_title="Financial Chatbot",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -418,7 +418,7 @@ const checkForChatContainer = setInterval(function() {
 """, unsafe_allow_html=True)
 
 class FinancialChatbotUI:
-    """Main UI class for the Financial Multi-Agent Chatbot."""
+    """Main UI class for the Financial Chatbot."""
     
     def __init__(self):
         self.api_base_url = "http://localhost:8000"
@@ -958,7 +958,7 @@ class FinancialChatbotUI:
         """Render welcome screen when no agent is selected."""
         st.markdown("""
         <div style="text-align: center; padding: 50px;">
-            <h1>🤖 Financial Multi-Agent Chatbot</h1>
+            <h1>🤖 Financial Chatbot</h1>
             <h3>Welcome to your AI-powered financial assistant!</h3>
             <p style="font-size: 18px; color: #666;">
                 Select an agent from the sidebar to start chatting and upload your financial documents.
@@ -1006,7 +1006,7 @@ class FinancialChatbotUI:
         # Header
         st.markdown("""
         <div style="text-align: center; padding: 10px; background: linear-gradient(90deg, #007bff, #28a745); color: white; border-radius: 10px; margin-bottom: 20px;">
-            <h1>🤖 Financial Multi-Agent Chatbot</h1>
+            <h1>🤖 Financial Chatbot</h1>
             <p>AI-powered financial document analysis and insights</p>
         </div>
         """, unsafe_allow_html=True)

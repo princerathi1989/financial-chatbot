@@ -40,16 +40,16 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parent
     backend_app_path = repo_root / "backend" / "app"
     uvicorn_app_module = "backend.uvicorn_app:app"
-    streamlit_app_path = repo_root / "frontend" / "streamlit_app" / "app.py"
+    streamlit_app_path = repo_root / "frontend" / "app.py"
 
     # Ensure backend is importable
-    extend_pythonpath(str(backend_app_path))
+    extend_pythonpath(str(repo_root / "backend"))
 
     args = parse_args()
 
     # Clear uploads directory on startup (recreated via ensure_directories)
     try:
-        from core.config import settings, ensure_directories
+        from backend.app.core.config import settings, ensure_directories
         uploads_dir = Path(settings.upload_directory)
         if uploads_dir.exists():
             shutil.rmtree(uploads_dir, ignore_errors=True)

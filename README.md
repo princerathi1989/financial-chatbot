@@ -43,7 +43,7 @@ uvicorn backend.uvicorn_app:app --reload --host 0.0.0.0 --port 8000
 
 - Frontend only:
 ```bash
-streamlit run frontend/streamlit_app/app.py
+streamlit run frontend/app.py
 ```
 
 Access: UI http://localhost:8501 • API docs http://localhost:8000/docs
@@ -62,8 +62,7 @@ financial-chatbot/
 │  ├── requirements.txt
 │  └── uvicorn_app.py
 ├── frontend/
-│  └── streamlit_app/
-│     └── app.py
+│  └── app.py
 ├── infra/
 │  ├── deployment/
 │  └── docker/

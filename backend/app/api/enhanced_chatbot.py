@@ -115,7 +115,6 @@ class EnhancedFinancialChatbot:
             if not chunks:
                 return None
             
-            # Extract metadata from first chunk
             metadata = chunks[0]['metadata']
             
             return {

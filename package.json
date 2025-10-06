@@ -1,0 +1,66 @@
+{
+  "name": "financial-chatbot",
+  "version": "1.0.0",
+  "description": "Financial Multi-Agent Chatbot with LangChain, LangGraph and FastAPI",
+  "scripts": {
+    "install": "pip install -r requirements.txt",
+    "install-dev": "pip install -r requirements.txt && pip install watchdog",
+    "start": "source venv/bin/activate && python start_chatbot.py",
+    "start-backend": "source venv/bin/activate && python start_chatbot.py --no-frontend",
+    "start-frontend": "source venv/bin/activate && python -m streamlit run frontend/app.py --server.port 8501",
+    "start-dev": "source venv/bin/activate && python start_chatbot.py --reload",
+    "start-prod": "source venv/bin/activate && python start_chatbot.py --api-port 8000 --ui-port 8501",
+    "kill-ports": "lsof -ti:8000,8501 | xargs kill -9 2>/dev/null || echo 'No processes found on ports 8000 or 8501'",
+    "kill-8000": "lsof -ti:8000 | xargs kill -9 2>/dev/null || echo 'No process found on port 8000'",
+    "kill-8501": "lsof -ti:8501 | xargs kill -9 2>/dev/null || echo 'No process found on port 8501'",
+    "check-ports": "lsof -i :8000,8501 || echo 'No processes found on ports 8000 or 8501'",
+    "test": "source venv/bin/activate && python -m pytest tests/ -v",
+    "test-coverage": "source venv/bin/activate && python -m pytest tests/ --cov=backend/app --cov-report=html",
+    "lint": "source venv/bin/activate && flake8 backend/app/ --max-line-length=100",
+    "format": "source venv/bin/activate && black backend/app/ --line-length=100",
+    "type-check": "source venv/bin/activate && mypy backend/app/",
+    "clean": "rm -rf backend/app/storage/uploads/* backend/app/storage/temp/* __pycache__ backend/__pycache__ backend/app/__pycache__ backend/app/*/__pycache__",
+    "clean-all": "rm -rf venv/ backend/app/storage/uploads/* backend/app/storage/temp/* __pycache__ backend/__pycache__ backend/app/__pycache__ backend/app/*/__pycache__",
+    "setup": "python -m venv venv && source venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt",
+    "reset": "npm run kill-ports && npm run clean && npm run install",
+    "logs": "tail -f logs/app.log 2>/dev/null || echo 'No log file found'",
+    "health": "curl -s http://localhost:8000/health | python -m json.tool || echo 'Backend not running'",
+    "docs": "echo 'API Documentation: http://localhost:8000/docs' && echo 'ReDoc: http://localhost:8000/redoc'",
+    "env-check": "python -c \"from backend.app.core.config import settings; print(f'OpenAI Model: {settings.openai_model}'); print(f'Environment: {settings.environment}'); print(f'Debug: {settings.debug}')\"",
+    "vector-stats": "curl -s http://localhost:8000/stats | python -m json.tool || echo 'Backend not running'",
+    "list-docs": "curl -s http://localhost:8000/documents | python -m json.tool || echo 'Backend not running'",
+    "docker-build": "docker build -t financial-chatbot .",
+    "docker-run": "docker run -p 8000:8000 --env-file .env financial-chatbot",
+    "docker-compose-up": "docker-compose up -d",
+    "docker-compose-down": "docker-compose down",
+    "docker-compose-prod": "docker-compose -f docker-compose.prod.yml up -d",
+    "docker-compose-prod-down": "docker-compose -f docker-compose.prod.yml down",
+    "docker-logs": "docker-compose logs -f chatbot",
+    "docker-stop": "docker stop $(docker ps -q --filter ancestor=financial-chatbot) 2>/dev/null || echo 'No running containers found'",
+    "docker-clean": "docker system prune -f && docker image rm financial-chatbot 2>/dev/null || echo 'No images to remove'",
+    "docker-shell": "docker-compose exec chatbot bash"
+  },
+  "keywords": [
+    "financial",
+    "chatbot",
+    "langchain",
+    "fastapi",
+    "streamlit",
+    "ai",
+    "rag",
+    "pinecone"
+  ],
+  "author": "Financial Chatbot Team",
+  "license": "MIT",
+  "engines": {
+    "python": ">=3.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/financial-chatbot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/financial-chatbot/issues"
+  },
+  "homepage": "https://github.com/your-org/financial-chatbot#readme"
+}
