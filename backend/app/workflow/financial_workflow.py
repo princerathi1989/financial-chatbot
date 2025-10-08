@@ -44,7 +44,7 @@ class FinancialWorkflow:
             "router",
             self._route_decision,
             {
-                "rag": "rag_agent",
+                "q&a": "rag_agent",
                 "summarization": "summarization_agent", 
                 "mcq": "mcq_agent",
                 "error": "error_handler"
@@ -77,8 +77,8 @@ class FinancialWorkflow:
             ]):
                 agent_type = "mcq"
             else:
-                # Default to RAG for all other queries (including analytics queries)
-                agent_type = "rag"
+                # Default to Q&A for all other queries (including analytics queries)
+                agent_type = "q&a"
             
             # Override with explicit agent type if provided
             if state.get("agent_type"):
@@ -99,7 +99,7 @@ class FinancialWorkflow:
         """Decision function for routing."""
         if state.get("error"):
             return "error"
-        return state.get("next_agent", "rag")
+        return state.get("next_agent", "q&a")
     
     @traceable(name="financial_rag_agent")
     def _rag_agent_node(self, state: FinancialState) -> FinancialState:
@@ -123,7 +123,7 @@ class FinancialWorkflow:
             if not context_chunks:
                 state["response"] = "I couldn't find relevant financial information in the uploaded documents to answer your question."
                 state["sources"] = []
-                state["metadata"] = {"context_chunks_found": 0, "agent_type": "rag"}
+                state["metadata"] = {"context_chunks_found": 0, "agent_type": "q&a"}
                 return state
             
             # Generate answer using LangChain with analytics awareness
@@ -157,7 +157,7 @@ class FinancialWorkflow:
             state["metadata"] = {
                 "context_chunks_found": len(context_chunks),
                 "document_id": document_id,
-                "agent_type": "rag",
+                "agent_type": "q&a",
                 "is_analytics_query": is_analytics_query,
                 "query_complexity": query_complexity
             }
@@ -168,7 +168,7 @@ class FinancialWorkflow:
             self.logger.error(f"Error in RAG agent: {e}")
             state["error"] = str(e)
             state["response"] = "I encountered an error while processing your financial question. Please try again."
-            state["metadata"] = {"agent_type": "rag", "error": str(e)}
+            state["metadata"] = {"agent_type": "q&a", "error": str(e)}
             return state
     
     def _is_analytics_query(self, query: str) -> bool:
@@ -393,7 +393,7 @@ Rationale: [Explanation]
             
             response = FinancialResponse(
                 response=final_state["response"],
-                agent_type=final_state["metadata"].get("agent_type", "rag"),
+                agent_type=final_state["metadata"].get("agent_type", "q&a"),
                 sources=final_state["sources"],
                 metadata=final_state["metadata"]
             )

@@ -1,8 +1,8 @@
-# Multi-Agent Chatbot API Documentation
+# Financial Multi-Agent Chatbot API Documentation
 
 ## Overview
 
-The Multi-Agent Chatbot API provides a comprehensive interface for interacting with specialized AI agents that can process documents, answer questions, generate summaries, create quizzes, and perform analytics.
+The Financial Multi-Agent Chatbot API provides a comprehensive interface for interacting with specialized AI agents that can process PDF documents, answer questions, generate summaries, and create quizzes.
 
 ## Base URL
 
@@ -35,7 +35,7 @@ Check the health status of the API.
 
 #### POST /upload/multiple
 
-Upload and process one or more PDF/CSV documents.
+Upload and process one or more PDF documents.
 
 **Request:**
 - Content-Type: `multipart/form-data`
@@ -70,7 +70,7 @@ Send a message to the multi-agent system.
 ```json
 {
   "message": "What is the main topic of the document?",
-  "agent_type": "rag",
+  "agent_type": "q&a",
   "document_id": "doc_123456",
   "conversation_history": []
 }
@@ -80,7 +80,7 @@ Send a message to the multi-agent system.
 ```json
 {
   "response": "The main topic of the document is ...",
-  "agent_type": "rag",
+  "agent_type": "q&a",
   "sources": [
     {
       "content": "Quarterly revenue grew 12% ...",
@@ -96,7 +96,7 @@ Send a message to the multi-agent system.
   ],
   "metadata": {
     "context_chunks_found": 5,
-    "agent_type": "rag",
+    "agent_type": "q&a",
     "is_analytics_query": false,
     "document_types": ["pdf"]
   }
@@ -110,13 +110,13 @@ Send a message to the multi-agent system.
 Get information about a specific agent.
 
 **Parameters:**
-- `agent_type`: One of `rag`, `summarization`, `mcq`
+- `agent_type`: One of `q&a`, `summarization`, `mcq`
 
 **Response:**
 ```json
 {
-  "name": "Universal Financial Agent",
-  "description": "Question-answering and analytics over PDF and CSV documents using retrieval-augmented generation",
+  "name": "Q&A Agent",
+  "description": "Question-answering and analytics over PDF documents using retrieval-augmented generation",
   "capabilities": [
     "Document Q&A",
     "Analytics & KPIs",
@@ -126,7 +126,7 @@ Get information about a specific agent.
     "Data insights"
   ],
   "input_requirements": [
-    "PDF and CSV documents",
+    "PDF documents",
     "Natural language questions",
     "Analytics queries"
   ]
@@ -146,7 +146,8 @@ List all uploaded documents.
     "document_id": "doc_123456",
     "filename": "document.pdf",
     "file_type": "pdf",
-    "status": "processed"
+    "status": "processed",
+    "total_chunks": 25
   }
 ]
 ```
@@ -191,14 +192,13 @@ Get system statistics and status.
 ```json
 {
   "total_documents": 10,
-  "pdf_documents": 7,
-  "csv_documents": 3,
+  "pdf_documents": 10,
   "vector_store": {
     "total_chunks": 250,
     "collection_name": "financial-documents"
   },
   "agents": {
-    "rag": "active",
+    "q&a": "active",
     "summarization": "active",
     "mcq": "active"
   }
@@ -207,23 +207,22 @@ Get system statistics and status.
 
 ## Agent Types
 
-### Universal Financial Agent (`rag`)
+### Q&A Agent (`q&a`)
 
-**Purpose:** Question-answering and analytics over PDF and CSV documents using retrieval-augmented generation.
+**Purpose:** Question-answering and analytics over PDF documents using retrieval-augmented generation.
 
 **Capabilities:**
-- Answer questions about uploaded PDF and CSV documents
+- Answer questions about uploaded PDF documents
 - Perform analytics, KPI calculations, and trend analysis
 - Provide citations and source references
 - Context-aware responses based on document content
-- Handle mixed queries across document types
 - Generate insights from financial data
 
 **Usage:**
 ```json
 {
-  "message": "What are the revenue trends in this CSV data?",
-  "agent_type": "rag",
+  "message": "What are the revenue trends in this document?",
+  "agent_type": "q&a",
   "document_id": "doc_123456"
 }
 ```
@@ -232,7 +231,7 @@ Get system statistics and status.
 ```json
 {
   "message": "Calculate the profit margins and identify any anomalies",
-  "agent_type": "rag",
+  "agent_type": "q&a",
   "document_id": "doc_123456"
 }
 ```
@@ -272,7 +271,6 @@ Get system statistics and status.
   "document_id": "doc_123456"
 }
 ```
-
 
 ## Error Handling
 
@@ -318,19 +316,18 @@ Currently, no rate limiting is implemented. In production, implement appropriate
 ## File Upload Limits
 
 - **Maximum file size:** 50MB
-- **Supported formats:** PDF, CSV
+- **Supported formats:** PDF only
 - **Processing timeout:** 5 minutes
 
 ## Examples
 
 ### Complete Workflow Example
 
-1. **Upload PDF/CSV documents:**
+1. **Upload PDF documents:**
 ```bash
 curl -X POST "http://localhost:8000/upload/multiple" \
   -H "Content-Type: multipart/form-data" \
-  -F "files=@document.pdf" \
-  -F "files=@data.csv"
+  -F "files=@document.pdf"
 ```
 
 2. **Ask a question about the document:**
@@ -339,7 +336,7 @@ curl -X POST "http://localhost:8000/chat" \
   -H "Content-Type: application/json" \
   -d '{
     "message": "What is the main topic of this document?",
-    "agent_type": "rag",
+    "agent_type": "q&a",
     "document_id": "doc_123456"
   }'
 ```
@@ -365,7 +362,6 @@ import requests
 # Upload documents
 files = [
     ('files', ('document.pdf', open('document.pdf', 'rb'), 'application/pdf')),
-    ('files', ('data.csv', open('data.csv', 'rb'), 'text/csv')),
 ]
 upload_resp = requests.post('http://localhost:8000/upload/multiple', files=files)
 upload_resp.raise_for_status()
@@ -376,7 +372,7 @@ chat_resp = requests.post(
     'http://localhost:8000/chat',
     json={
         'message': 'What is the main topic?',
-        'agent_type': 'rag',
+        'agent_type': 'q&a',
         'document_id': first_doc_id
     }
 )
@@ -389,7 +385,6 @@ print(chat_resp.json()['response'])
 // Upload documents
 const formData = new FormData();
 formData.append('files', pdfFile);
-formData.append('files', csvFile);
 
 const uploadResponse = await fetch('/upload/multiple', {
   method: 'POST',
@@ -404,10 +399,54 @@ const chatResponse = await fetch('/chat', {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     message: 'What is the main topic?',
-    agent_type: 'rag',
+    agent_type: 'q&a',
     document_id
   })
 });
 const { response } = await chatResponse.json();
 console.log(response);
+```
+
+## API Response Models
+
+### ChatRequest
+```json
+{
+  "message": "string",
+  "agent_type": "q&a" | "summarization" | "mcq",
+  "document_id": "string",
+  "conversation_history": []
+}
+```
+
+### ChatResponse
+```json
+{
+  "response": "string",
+  "agent_type": "q&a" | "summarization" | "mcq",
+  "sources": [
+    {
+      "content": "string",
+      "metadata": {},
+      "relevance_score": 0.92,
+      "document_type": "pdf"
+    }
+  ],
+  "metadata": {}
+}
+```
+
+### DocumentUploadResponse
+```json
+{
+  "document_id": "string",
+  "filename": "string",
+  "document_type": "pdf",
+  "status": "processed" | "error",
+  "metadata": {
+    "total_chunks": 25,
+    "total_words": 5000,
+    "file_size": 1024000
+  }
+}
 ```

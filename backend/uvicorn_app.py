@@ -14,7 +14,7 @@ from app.models.schemas import (
     ChatRequest, ChatResponse, DocumentUploadResponse, 
     ErrorResponse, AgentType, DocumentType
 )
-from app.api.langgraph_chatbot import chatbot
+from app.api.financial_chatbot import chatbot
 
 ensure_directories()
 
@@ -59,7 +59,7 @@ async def root():
         "message": "Financial Multi-Agent Chatbot API",
         "version": "1.0.0",
         "docs": "/docs",
-        "agents": ["rag", "summarization", "mcq"],
+        "agents": ["q&a", "summarization", "mcq"],
         "supported_formats": ["pdf"]
     }
 
@@ -156,8 +156,8 @@ async def chat(request: ChatRequest):
 async def get_agent_info(agent_type: AgentType):
     """Get information about a specific agent."""
     agent_info = {
-        AgentType.RAG: {
-            "name": "Universal Financial Agent",
+        AgentType.QnA: {
+            "name": "Q&A Agent",
             "description": "Question-answering and analytics over PDF documents using retrieval-augmented generation",
             "capabilities": ["Document Q&A", "Analytics & KPIs", "Trend analysis", "Context retrieval", "Citation tracking", "Data insights"],
             "input_requirements": ["PDF documents", "Natural language questions", "Analytics queries"]
@@ -250,7 +250,7 @@ async def get_stats():
             "pdf_documents": len([d for d in documents if d["file_type"] == "pdf"]),
             "vector_store": vector_stats,
             "agents": {
-                "rag": "active",
+                "q&a": "active",
                 "summarization": "active", 
                 "mcq": "active"
             }

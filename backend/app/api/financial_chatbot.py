@@ -1,4 +1,4 @@
-"""Enhanced API layer for document-based financial chatbot."""
+"""Unified API layer for the Financial Multi-Agent Chatbot."""
 
 from typing import Dict, Any, Optional, List
 from loguru import logger
@@ -7,26 +7,31 @@ from app.models.schemas import ChatRequest, ChatResponse, AgentType, DocumentUpl
 from app.workflow.financial_workflow import FinancialWorkflow, FinancialRequest
 from app.ingestion.pipeline import DocumentIngestionPipeline
 from app.storage.vector_store import get_vector_store
+from dotenv import load_dotenv
 
-class EnhancedFinancialChatbot:
-    """Enhanced chatbot focused on user-uploaded documents."""
+load_dotenv()
+
+
+class FinancialChatbot:
+    """Unified chatbot for financial document processing and Q&A."""
     
     def __init__(self):
         self.workflow = FinancialWorkflow()
         self.ingestion_pipeline = DocumentIngestionPipeline()
-        self.logger = logger.bind(component="enhanced_chatbot")
+        self.document_store = {}  # In production, this would be a proper database
+        self.logger = logger.bind(component="financial_chatbot")
     
     def process_chat_message(self, request: ChatRequest, document_id: Optional[str] = None) -> ChatResponse:
-        """Process a chat message using uploaded documents."""
+        """Process a chat message using LangGraph workflow with optional document context."""
         try:
-            # Search uploaded documents if document_id is provided
+            # Prepare context from document if provided
             context = ""
             if document_id:
                 vector_store = get_vector_store()
                 search_results = vector_store.search_similar_chunks(
                     query=request.message,
                     document_id=document_id,
-                    top_k=5
+                    top_k=settings.rag_top_k_results
                 )
                 context = self._prepare_context_from_search_results(search_results)
             
@@ -60,7 +65,7 @@ class EnhancedFinancialChatbot:
             self.logger.error(f"Error processing chat message: {e}")
             return ChatResponse(
                 response="I encountered an error while processing your request. Please try again.",
-                agent_type=AgentType.RAG,
+                agent_type=AgentType.QnA,
                 sources=[],
                 metadata={"error": str(e)}
             )
@@ -83,10 +88,29 @@ class EnhancedFinancialChatbot:
             # Process the document
             metadata = self.ingestion_pipeline.process_document(file_content, filename)
             
-            self.logger.info(f"Successfully uploaded document: {filename}")
+            # Store document metadata
+            document_id = metadata['document_id']
+            self.document_store[document_id] = metadata
+            
+            # Add to vector store if it has chunks
+            if 'chunks' in metadata and metadata['chunks']:
+                self.logger.info(f"🔄 UPLOAD: Adding document {document_id} ({filename}) to vector store...")
+                vector_store = get_vector_store()
+                vector_store.add_document_chunks(
+                    document_id=document_id,
+                    chunks=metadata['chunks'],
+                    metadata={
+                        'filename': metadata['filename'],
+                        'file_type': metadata['file_type'],
+                        'total_chunks': metadata['total_chunks']
+                    }
+                )
+                self.logger.info(f"🎉 UPLOAD COMPLETE: Document {document_id} ({filename}) successfully processed and stored!")
+            else:
+                self.logger.warning(f"⚠️ UPLOAD WARNING: Document {document_id} ({filename}) has no chunks to store")
             
             return DocumentUploadResponse(
-                document_id=metadata['document_id'],
+                document_id=document_id,
                 filename=filename,
                 document_type=metadata['file_type'],
                 status='processed',
@@ -110,14 +134,25 @@ class EnhancedFinancialChatbot:
     def get_document_info(self, document_id: str) -> Optional[Dict[str, Any]]:
         """Get information about a specific document."""
         try:
-            # Get document chunks to determine info
+            # First check local document store
+            if document_id in self.document_store:
+                doc_data = self.document_store[document_id]
+                return {
+                    'document_id': document_id,
+                    'filename': doc_data['filename'],
+                    'file_type': doc_data['file_type'],
+                    'total_chunks': doc_data.get('total_chunks', 0),
+                    'total_words': doc_data.get('total_words', 0),
+                    'status': doc_data.get('status', 'processed')
+                }
+            
+            # Fallback to vector store
             vector_store = get_vector_store()
             chunks = vector_store.get_document_chunks(document_id)
             if not chunks:
                 return None
             
             metadata = chunks[0]['metadata']
-            
             return {
                 'document_id': document_id,
                 'filename': metadata.get('filename', 'Unknown'),
@@ -133,14 +168,18 @@ class EnhancedFinancialChatbot:
     def list_documents(self) -> List[Dict[str, Any]]:
         """List all uploaded documents."""
         try:
-            # Get all document IDs from vector store
-            # This is a simplified implementation - you might need to implement
-            # a proper method in vector_store to get all document IDs
+            # Get documents from local store first
             documents = []
+            for doc_id, doc_data in self.document_store.items():
+                documents.append({
+                    'document_id': doc_id,
+                    'filename': doc_data['filename'],
+                    'file_type': doc_data['file_type'],
+                    'status': doc_data.get('status', 'processed'),
+                    'total_chunks': doc_data.get('total_chunks', 0)
+                })
             
-            # For now, return empty list - this would need proper implementation
-            # based on your vector store's capabilities
-            self.logger.info("Listed all documents")
+            self.logger.info(f"Listed {len(documents)} documents")
             return documents
             
         except Exception as e:
@@ -148,18 +187,28 @@ class EnhancedFinancialChatbot:
             return []
     
     def delete_document(self, document_id: str) -> bool:
-        """Delete a document."""
+        """Delete a document and its associated data."""
         try:
-            vector_store = get_vector_store()
-            success = vector_store.delete_document(document_id)
-            if success:
-                self.logger.info(f"Successfully deleted document: {document_id}")
-            else:
-                self.logger.warning(f"Document not found: {document_id}")
-            return success
+            success = False
             
+            # Remove from vector store
+            vector_store = get_vector_store()
+            vector_success = vector_store.delete_document(document_id)
+            
+            # Remove from document store
+            if document_id in self.document_store:
+                del self.document_store[document_id]
+                success = True
+            
+            if vector_success or success:
+                self.logger.info(f"Successfully deleted document {document_id}")
+                return True
+            else:
+                self.logger.warning(f"Document {document_id} not found")
+                return False
+                
         except Exception as e:
-            self.logger.error(f"Error deleting document: {e}")
+            self.logger.error(f"Error deleting document {document_id}: {e}")
             return False
     
     def search_documents(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
@@ -191,5 +240,6 @@ class EnhancedFinancialChatbot:
             self.logger.error(f"Error getting document chunks: {e}")
             return []
 
-# Global enhanced chatbot instance
-enhanced_chatbot = EnhancedFinancialChatbot()
+
+# Global chatbot instance
+chatbot = FinancialChatbot()

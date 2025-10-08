@@ -423,8 +423,8 @@ class FinancialChatbotUI:
     def __init__(self):
         self.api_base_url = "http://localhost:8000"
         self.agents = {
-            "RAG": {
-                "name": "Universal Financial Agent",
+            "Q&A": {
+                "name": "Q&A Agent",
                 "description": "Question-answering and analytics over PDF documents",
                 "icon": "📄",
                 "color": "#007bff"
@@ -594,7 +594,7 @@ class FinancialChatbotUI:
             st.markdown("### 📋 Select Document")
             
             # Document Selection
-            if selected_agent in ["RAG", "SUMMARIZATION", "MCQ"]:
+            if selected_agent in ["Q&A", "SUMMARIZATION", "MCQ"]:
                 pdf_docs = st.session_state.get('uploaded_pdf_documents', [])
                 if pdf_docs:
                     pdf_options = {f"{doc['filename']}": doc['id'] for doc in pdf_docs}
@@ -902,17 +902,28 @@ class FinancialChatbotUI:
                 st.stop()
             
             # Send to API and get response (automatic agent selection)
-            with st.spinner("🤖 Analyzing your question..."):
+            # Since the backend automatically routes to the appropriate agent,
+            # we show a generic loading message
+            loading_message = "🤖 Analyzing your question..."
+            
+            with st.spinner(loading_message):
                 response = self.send_message(user_input, None, None)
             
             # Add bot response to chat
             if "error" not in response:
                 bot_message = response.get("response", "No response received")
                 sources = response.get("sources", [])
-                agent_type = response.get("agent_type", "RAG")
+                agent_type = response.get("agent_type", "Q&A")
+                # Map backend agent types to frontend agent types
+                agent_type_mapping = {
+                    "q&a": "Q&A",
+                    "summarization": "SUMMARIZATION", 
+                    "mcq": "MCQ"
+                }
+                agent_type = agent_type_mapping.get(agent_type.lower(), "Q&A")
                 
                 # Show which agent was used
-                agent_name = self.agents.get(agent_type, {}).get("name", "Financial Agent")
+                agent_name = self.agents.get(agent_type, {}).get("name", "Q&A Agent")
                 
                 st.session_state.messages.append({
                     "content": bot_message,
@@ -926,8 +937,8 @@ class FinancialChatbotUI:
                 st.session_state.messages.append({
                     "content": f"❌ Error: {response['error']}",
                     "is_user": False,
-                    "agent_type": "RAG",
-                    "agent_name": "Financial Agent",
+                    "agent_type": "Q&A",
+                    "agent_name": "Q&A Agent",
                     "timestamp": datetime.now().strftime("%H:%M"),
                     "sources": []
                 })
@@ -977,7 +988,7 @@ class FinancialChatbotUI:
         if 'pdf_document_id' not in st.session_state:
             st.session_state.pdf_document_id = None
         if 'selected_agent' not in st.session_state:
-            st.session_state.selected_agent = "RAG"
+            st.session_state.selected_agent = "Q&A"
         
         # Header
         st.markdown("""

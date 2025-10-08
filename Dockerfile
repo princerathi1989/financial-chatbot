@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app \
+    PYTHONPATH=/app/backend \
     PORT=8000
 
 # Set work directory
@@ -14,7 +14,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    libpq-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -26,10 +25,13 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . .
+COPY backend/ ./backend/
+COPY frontend/ ./frontend/
+COPY start_chatbot.py .
+COPY env.example .
 
 # Create necessary directories
-RUN mkdir -p storage/uploads storage/chroma_db storage/temp
+RUN mkdir -p backend/app/storage/uploads backend/app/storage/temp backend/app/storage/chroma_db
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app && \
@@ -43,5 +45,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application using the startup script
+# Run the application
 CMD ["python", "start_chatbot.py", "--no-frontend"]

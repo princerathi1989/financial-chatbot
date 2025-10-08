@@ -16,18 +16,8 @@ langgraph>=0.2.0
 langsmith>=0.0.77
 tiktoken>=0.5.0
 
-# Cloud Vector Store - Pinecone - Production Ready (REST API, no gRPC)
+# Cloud Vector Store - Pinecone
 pinecone>=3.0.0
-
-# Cloud Vector Store - Pinecone only for vector indexing
-
-# Data analysis (for analytics agent)
-numpy>=1.26.0
-scipy>=1.11.0
-scikit-learn>=1.3.0
-matplotlib>=3.7.0
-seaborn>=0.12.0
-plotly>=5.17.0
 
 # Utilities
 python-dotenv>=1.0.0
@@ -38,12 +28,6 @@ httpx>=0.25.0
 # UI Framework
 streamlit==1.28.1
 streamlit-chat==0.1.1
-
-# Development (optional - remove for production)
-pytest==7.4.3
-black==23.11.0
-flake8==6.1.0
-mypy==1.7.1
 
 # Build tools
 setuptools>=65.0.0
