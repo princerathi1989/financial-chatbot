@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.models.schemas import ChatRequest, ChatResponse, AgentType, DocumentUploadResponse
 from app.workflow.financial_workflow import FinancialWorkflow, FinancialRequest
 from app.ingestion.pipeline import DocumentIngestionPipeline
-from app.storage.vector_store import vector_store
+from app.storage.vector_store import get_vector_store
 from dotenv import load_dotenv
 
 load_dotenv()  
@@ -65,6 +65,8 @@ class LangGraphChatbot:
             
             # Add to vector store if it has chunks
             if 'chunks' in metadata and metadata['chunks']:
+                self.logger.info(f"🔄 UPLOAD: Adding document {document_id} ({filename}) to vector store...")
+                vector_store = get_vector_store()  # Get the initialized vector store
                 vector_store.add_document_chunks(
                     document_id=document_id,
                     chunks=metadata['chunks'],
@@ -74,8 +76,9 @@ class LangGraphChatbot:
                         'total_chunks': metadata['total_chunks']
                     }
                 )
-            
-            self.logger.info(f"Successfully uploaded document {document_id}")
+                self.logger.info(f"🎉 UPLOAD COMPLETE: Document {document_id} ({filename}) successfully processed and stored!")
+            else:
+                self.logger.warning(f"⚠️ UPLOAD WARNING: Document {document_id} ({filename}) has no chunks to store")
             
             return DocumentUploadResponse(
                 document_id=document_id,
@@ -94,7 +97,7 @@ class LangGraphChatbot:
             return DocumentUploadResponse(
                 document_id="",
                 filename=filename,
-                document_type="unknown",
+                document_type="pdf",  # Default to pdf since we only support PDFs
                 status='error',
                 metadata={"error": str(e)}
             )
@@ -120,6 +123,7 @@ class LangGraphChatbot:
         try:
             if document_id in self.document_store:
                 # Remove from vector store
+                vector_store = get_vector_store()
                 vector_store.delete_document(document_id)
                 
                 # Remove from document store

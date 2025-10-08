@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Financial Multi-Agent Chatbot",
-    description="A production-style POC for ingesting financial PDFs and CSVs with multi-agent capabilities",
+    description="A production-style POC for ingesting financial PDFs with multi-agent capabilities",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -60,7 +60,7 @@ async def root():
         "version": "1.0.0",
         "docs": "/docs",
         "agents": ["rag", "summarization", "mcq"],
-        "supported_formats": ["pdf", "csv"]
+        "supported_formats": ["pdf"]
     }
 
 
@@ -76,7 +76,7 @@ async def health_check():
 
 @app.post("/upload/multiple", response_model=List[DocumentUploadResponse])
 async def upload_multiple_files(files: List[UploadFile] = File(...)):
-    """Upload and process multiple documents (PDFs and CSVs)."""
+    """Upload and process multiple PDF documents."""
     try:
         if not files:
             raise HTTPException(status_code=400, detail="No files provided")
@@ -90,8 +90,8 @@ async def upload_multiple_files(files: List[UploadFile] = File(...)):
         for file in files:
             try:
                 # Validate file type
-                if not file.filename.lower().endswith(('.pdf', '.csv')):
-                    errors.append(f"{file.filename}: Only PDF and CSV files are allowed")
+                if not file.filename.lower().endswith('.pdf'):
+                    errors.append(f"{file.filename}: Only PDF files are allowed")
                     continue
                 
                 # Check file size
@@ -158,9 +158,9 @@ async def get_agent_info(agent_type: AgentType):
     agent_info = {
         AgentType.RAG: {
             "name": "Universal Financial Agent",
-            "description": "Question-answering and analytics over PDF and CSV documents using retrieval-augmented generation",
+            "description": "Question-answering and analytics over PDF documents using retrieval-augmented generation",
             "capabilities": ["Document Q&A", "Analytics & KPIs", "Trend analysis", "Context retrieval", "Citation tracking", "Data insights"],
-            "input_requirements": ["PDF and CSV documents", "Natural language questions", "Analytics queries"]
+            "input_requirements": ["PDF documents", "Natural language questions", "Analytics queries"]
         },
         AgentType.SUMMARIZATION: {
             "name": "Summarization Agent",
@@ -239,15 +239,15 @@ async def delete_document(document_id: str):
 async def get_stats():
     """Get system statistics."""
     try:
-        from app.storage.vector_store import vector_store
+        from app.storage.vector_store import get_vector_store
         
         documents = chatbot.list_documents()
+        vector_store = get_vector_store()
         vector_stats = vector_store.get_collection_stats()
         
         return {
             "total_documents": len(documents),
             "pdf_documents": len([d for d in documents if d["file_type"] == "pdf"]),
-            "csv_documents": len([d for d in documents if d["file_type"] == "csv"]),
             "vector_store": vector_stats,
             "agents": {
                 "rag": "active",

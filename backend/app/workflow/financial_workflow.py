@@ -10,7 +10,7 @@ from loguru import logger
 
 from .state import FinancialState, FinancialRequest, FinancialResponse
 from app.core.config import settings
-from app.storage.vector_store import vector_store
+from app.storage.vector_store import get_vector_store
 
 
 class FinancialWorkflow:
@@ -113,19 +113,12 @@ class FinancialWorkflow:
             query_complexity = self._get_query_complexity(query)
             
             # Retrieve relevant context (search across all documents if no specific document_id)
-            # Use enhanced CSV search if analytics query
-            if is_analytics_query:
-                context_chunks = vector_store.search_csv_specific(
-                    query=query,
-                    top_k=settings.rag_top_k_results,
-                    document_id=None  # Search across all documents for multi-document search
-                )
-            else:
-                context_chunks = vector_store.search_similar_chunks(
-                    query=query,
-                    top_k=settings.rag_top_k_results,
-                    document_id=None  # Search across all documents for multi-document search
-                )
+            vector_store = get_vector_store()
+            context_chunks = vector_store.search_similar_chunks(
+                query=query,
+                top_k=settings.rag_top_k_results,
+                document_id=None  # Search across all documents for multi-document search
+            )
             
             if not context_chunks:
                 state["response"] = "I couldn't find relevant financial information in the uploaded documents to answer your question."
@@ -139,22 +132,13 @@ class FinancialWorkflow:
                 for i, chunk in enumerate(context_chunks)
             ])
             
-            # Determine document types in context
-            document_types = set()
-            for chunk in context_chunks:
-                doc_type = chunk.get('metadata', {}).get('file_type', 'unknown')
-                document_types.add(doc_type)
-            
-            if is_analytics_query and 'csv' in document_types:
-                prompt = self._create_analytics_prompt()
-            else:
-                prompt = self._create_standard_prompt()
+            # Create prompt for the query
+            prompt = self._create_standard_prompt()
             
             chain = prompt | self.llm
             response = chain.invoke({
                 "context": context_text,
                 "question": query,
-                "document_types": ", ".join(document_types),
                 "complexity": query_complexity
             })
             
@@ -175,8 +159,7 @@ class FinancialWorkflow:
                 "document_id": document_id,
                 "agent_type": "rag",
                 "is_analytics_query": is_analytics_query,
-                "query_complexity": query_complexity,
-                "document_types": list(document_types)
+                "query_complexity": query_complexity
             }
             
             return state
@@ -220,46 +203,6 @@ class FinancialWorkflow:
         # Moderate queries (2-3 paragraphs) - default
         return "moderate"
     
-    def _create_analytics_prompt(self) -> ChatPromptTemplate:
-        """Create prompt for analytics queries with enhanced CSV handling."""
-        return ChatPromptTemplate.from_template("""
-You are a senior financial analyst and expert assistant specializing in financial document analysis, Q&A, and data analytics.
-
-CRITICAL: Keep your response EXTREMELY SHORT - maximum 1-2 sentences or 1 short paragraph. Be direct and concise.
-
-Context from financial documents (including CSV data):
-{context}
-
-Question: {question}
-
-Instructions for Analytics Queries:
-- Analyze the financial data and provide concise insights
-- Calculate relevant KPIs, ratios, and metrics when possible
-- Identify key trends, patterns, and anomalies in the data
-- Provide quantitative analysis with specific numbers and percentages
-- Compare different time periods or categories when relevant
-- Highlight key business insights and recommendations
-- Use proper financial terminology and maintain professional tone
-
-CSV Data Analysis Guidelines:
-- When CSV data is present, leverage the structured chunks for precise analysis
-- Use correlation matrices, statistical summaries, and category analyses
-- Reference specific data points from row-based chunks when needed
-- Perform calculations using the provided statistical summaries
-- Identify patterns in categorical data and time-series trends
-- Cite specific values, percentages, and ranges from the data
-
-Response Length Guidelines (Query Complexity: {complexity}):
-- ALWAYS keep responses to 1-2 paragraphs maximum
-- Be concise and direct - avoid unnecessary elaboration
-- Focus on key information and actionable insights only
-- Prioritize clarity and brevity over comprehensive detail
-- Use bullet points when appropriate for better readability
-
-Document Types Available: {document_types}
-
-Answer with detailed analytics:
-""")
     
     def _create_standard_prompt(self) -> ChatPromptTemplate:
         """Create prompt for standard Q&A queries with dynamic length control."""
@@ -280,7 +223,7 @@ Instructions:
 - Be precise and professional in your response
 - Focus on financial insights, metrics, and analysis
 - Use proper financial terminology and maintain professional tone
-- Handle both PDF and CSV data appropriately
+- Handle PDF data appropriately
 - BE CONCISE: Focus on essential information only
 
 Response Length Guidelines (Query Complexity: {complexity}):
@@ -298,6 +241,7 @@ Answer:
         """Summarization agent node for multi-document summarization."""
         try:
             # Get all document chunks for comprehensive summarization
+            vector_store = get_vector_store()
             chunks = vector_store.get_all_chunks()
             
             if not chunks:
@@ -356,6 +300,7 @@ KEY QUOTES:
         """MCQ generation agent node for multi-document content."""
         try:
             # Get all document chunks for comprehensive MCQ generation
+            vector_store = get_vector_store()
             chunks = vector_store.get_all_chunks()
             
             if not chunks:
@@ -435,7 +380,6 @@ Rationale: [Explanation]
                 "agent_type": request.agent_type,
                 "context_chunks": [],
                 "document_content": None,
-                "csv_data": None,
                 "response": "",
                 "sources": [],
                 "metadata": {},

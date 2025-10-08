@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.models.schemas import ChatRequest, ChatResponse, AgentType, DocumentUploadResponse
 from app.workflow.financial_workflow import FinancialWorkflow, FinancialRequest
 from app.ingestion.pipeline import DocumentIngestionPipeline
-from app.storage.vector_store import vector_store
+from app.storage.vector_store import get_vector_store
 
 class EnhancedFinancialChatbot:
     """Enhanced chatbot focused on user-uploaded documents."""
@@ -14,7 +14,6 @@ class EnhancedFinancialChatbot:
     def __init__(self):
         self.workflow = FinancialWorkflow()
         self.ingestion_pipeline = DocumentIngestionPipeline()
-        self.vector_store = vector_store
         self.logger = logger.bind(component="enhanced_chatbot")
     
     def process_chat_message(self, request: ChatRequest, document_id: Optional[str] = None) -> ChatResponse:
@@ -23,7 +22,8 @@ class EnhancedFinancialChatbot:
             # Search uploaded documents if document_id is provided
             context = ""
             if document_id:
-                search_results = self.vector_store.search_similar_chunks(
+                vector_store = get_vector_store()
+                search_results = vector_store.search_similar_chunks(
                     query=request.message,
                     document_id=document_id,
                     top_k=5
@@ -102,7 +102,7 @@ class EnhancedFinancialChatbot:
             return DocumentUploadResponse(
                 document_id="",
                 filename=filename,
-                document_type="unknown",
+                document_type="pdf",  # Default to pdf since we only support PDFs
                 status='error',
                 metadata={"error": str(e)}
             )
@@ -111,7 +111,8 @@ class EnhancedFinancialChatbot:
         """Get information about a specific document."""
         try:
             # Get document chunks to determine info
-            chunks = self.vector_store.get_document_chunks(document_id)
+            vector_store = get_vector_store()
+            chunks = vector_store.get_document_chunks(document_id)
             if not chunks:
                 return None
             
@@ -149,7 +150,8 @@ class EnhancedFinancialChatbot:
     def delete_document(self, document_id: str) -> bool:
         """Delete a document."""
         try:
-            success = self.vector_store.delete_document(document_id)
+            vector_store = get_vector_store()
+            success = vector_store.delete_document(document_id)
             if success:
                 self.logger.info(f"Successfully deleted document: {document_id}")
             else:
@@ -163,7 +165,8 @@ class EnhancedFinancialChatbot:
     def search_documents(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """Search across all uploaded documents."""
         try:
-            results = self.vector_store.search_similar_chunks(
+            vector_store = get_vector_store()
+            results = vector_store.search_similar_chunks(
                 query=query,
                 document_id=None,  # Search all documents
                 top_k=top_k
@@ -179,7 +182,8 @@ class EnhancedFinancialChatbot:
     def get_document_chunks(self, document_id: str) -> List[Dict[str, Any]]:
         """Get all chunks for a specific document."""
         try:
-            chunks = self.vector_store.get_document_chunks(document_id)
+            vector_store = get_vector_store()
+            chunks = vector_store.get_document_chunks(document_id)
             self.logger.info(f"Retrieved {len(chunks)} chunks for document: {document_id}")
             return chunks
             

@@ -17,7 +17,6 @@ class FinancialState(TypedDict):
     # Processing
     context_chunks: List[Dict[str, Any]]
     document_content: Optional[str]
-    csv_data: Optional[Any]  # pandas DataFrame
     
     # Output
     response: str

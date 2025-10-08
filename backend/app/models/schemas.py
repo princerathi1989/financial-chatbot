@@ -15,7 +15,6 @@ class AgentType(str, Enum):
 class DocumentType(str, Enum):
     """Supported document types."""
     PDF = "pdf"
-    CSV = "csv"
 
 
 class ChatMessage(BaseModel):

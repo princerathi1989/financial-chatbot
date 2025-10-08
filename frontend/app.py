@@ -6,7 +6,7 @@ A WhatsApp-like interface for the Financial Multi-Agent Chatbot system.
 Features:
 - Modern chat interface with message bubbles
 - Agent selection (RAG, Summarization, MCQ, Analytics)
-- File upload for PDFs and CSVs
+- File upload for PDFs
 - Chat history and conversation management
 - Real-time responses from the FastAPI backend
 """
@@ -425,7 +425,7 @@ class FinancialChatbotUI:
         self.agents = {
             "RAG": {
                 "name": "Universal Financial Agent",
-                "description": "Question-answering and analytics over PDF and CSV documents",
+                "description": "Question-answering and analytics over PDF documents",
                 "icon": "📄",
                 "color": "#007bff"
             },
@@ -534,11 +534,11 @@ class FinancialChatbotUI:
             # Multi-File Upload
             st.markdown("**📤 Upload Multiple Files**")
             uploaded_files = st.file_uploader(
-                "Upload multiple PDFs and CSVs",
-                type=['pdf', 'csv'],
+                "Upload multiple PDFs",
+                type=['pdf'],
                 accept_multiple_files=True,
                 key="multi_uploader",
-                help="Select multiple PDF and CSV files to upload at once (max 10 files)"
+                help="Select multiple PDF files to upload at once (max 10 files)"
             )
             
             if uploaded_files:
@@ -562,24 +562,17 @@ class FinancialChatbotUI:
                             successful_uploads = 0
                             failed_uploads = 0
                             uploaded_pdf_ids = []
-                            uploaded_csv_ids = []
                             
                             for i, result in enumerate(results):
                                 if "error" not in result and result.get('status') == 'processed':
                                     st.success(f"✅ {result['filename']}")
                                     successful_uploads += 1
                                     
-                                    # Store document IDs by type
-                                    if result.get('document_type') == 'pdf':
-                                        uploaded_pdf_ids.append({
-                                            'id': result['document_id'],
-                                            'filename': result['filename']
-                                        })
-                                    elif result.get('document_type') == 'csv':
-                                        uploaded_csv_ids.append({
-                                            'id': result['document_id'],
-                                            'filename': result['filename']
-                                        })
+                                    # Store document IDs
+                                    uploaded_pdf_ids.append({
+                                        'id': result['document_id'],
+                                        'filename': result['filename']
+                                    })
                                 else:
                                     st.error(f"❌ {filenames[i]}: {result.get('error', 'Upload failed')}")
                                     failed_uploads += 1
@@ -590,12 +583,6 @@ class FinancialChatbotUI:
                                 # Set the first PDF as default if none selected
                                 if not st.session_state.get('pdf_document_id'):
                                     st.session_state['pdf_document_id'] = uploaded_pdf_ids[0]['id']
-                            
-                            if uploaded_csv_ids:
-                                st.session_state['uploaded_csv_documents'] = uploaded_csv_ids
-                                # Set the first CSV as default if none selected
-                                if not st.session_state.get('csv_document_id'):
-                                    st.session_state['csv_document_id'] = uploaded_csv_ids[0]['id']
                             
                             # Summary
                             if successful_uploads > 0:
@@ -813,12 +800,6 @@ class FinancialChatbotUI:
                                 "filename": filename,
                                 "upload_time": datetime.now().strftime("%Y-%m-%d %H:%M")
                             })
-                        elif document_type == "csv":
-                            st.session_state.uploaded_csv_documents.append({
-                                "id": document_id,
-                                "filename": filename,
-                                "upload_time": datetime.now().strftime("%Y-%m-%d %H:%M")
-                            })
                     
                     st.rerun()
                 else:
@@ -914,8 +895,7 @@ class FinancialChatbotUI:
             
             # Check if documents are available
             pdf_docs = st.session_state.get('uploaded_pdf_documents', [])
-            csv_docs = st.session_state.get('uploaded_csv_documents', [])
-            total_docs = len(pdf_docs) + len(csv_docs)
+            total_docs = len(pdf_docs)
             
             if total_docs == 0:
                 st.error("❌ Please upload documents first!")
@@ -981,7 +961,7 @@ class FinancialChatbotUI:
         with col2:
             st.markdown("""
             ### 📊 Data Analytics
-            - Upload CSV financial data
+            - Upload PDF financial documents
             - Get insights and trends
             - Calculate KPIs
             - Detect anomalies
@@ -994,12 +974,8 @@ class FinancialChatbotUI:
             st.session_state.messages = []
         if 'uploaded_pdf_documents' not in st.session_state:
             st.session_state.uploaded_pdf_documents = []
-        if 'uploaded_csv_documents' not in st.session_state:
-            st.session_state.uploaded_csv_documents = []
         if 'pdf_document_id' not in st.session_state:
             st.session_state.pdf_document_id = None
-        if 'csv_document_id' not in st.session_state:
-            st.session_state.csv_document_id = None
         if 'selected_agent' not in st.session_state:
             st.session_state.selected_agent = "RAG"
         
@@ -1018,9 +994,9 @@ class FinancialChatbotUI:
             # File upload
             uploaded_files = st.file_uploader(
                 "Browse Documents",
-                type=['pdf', 'csv'],
+                type=['pdf'],
                 accept_multiple_files=True,
-                help="Select PDF or CSV files to upload"
+                help="Select PDF files to upload"
             )
         
         with col2:
